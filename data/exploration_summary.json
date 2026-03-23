@@ -1,0 +1,16 @@
+{
+  "location": "Kakamega, Kenya",
+  "coordinates": {
+    "lat": 0.28,
+    "lon": 34.75
+  },
+  "period": "2022-03-01 to 2022-04-30",
+  "findings": {
+    "total_rainfall_mm": 234.3,
+    "max_single_day_mm": 25.7,
+    "max_rain_date": "2022-04-26",
+    "avg_soil_moisture": 0.525,
+    "days_below_critical_moisture": 0,
+    "days_above_onset_threshold": 3
+  }
+}
