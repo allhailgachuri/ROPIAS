@@ -1,172 +1,220 @@
-/* 
-    ropias.css 
-    Premium Styling for ROPIAS 
-*/
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --bg-dark: #0f172a;
-    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    --card-bg: rgba(255, 255, 255, 0.05);
-    --card-border: rgba(255, 255, 255, 0.1);
-    
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    
-    --accent-blue: #3b82f6;
-    --accent-green: #10b981;
-    --accent-red: #ef4444;
-    --accent-orange: #f59e0b;
-    --accent-yellow: #eab308;
-    
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* ── Brand Palette ── */
+  --navy:     #2F4156;   /* Primary dark — headers, hero, CTA buttons */
+  --teal:     #567C8D;   /* Secondary — card accents, active states, icons */
+  --sky:      #C8D9E6;   /* Light surface — card backgrounds, input fills */
+  --beige:    #F5EFEB;   /* Page background in light mode */
+  --white:    #FFFFFF;   /* Pure white — content areas */
+
+  /* ── Semantic mapping ── */
+  --color-bg-page:        var(--beige);
+  --color-bg-card:        var(--white);
+  --color-bg-input:       var(--sky);
+  --color-text-primary:   var(--navy);
+  --color-text-secondary: var(--teal);
+  --color-text-muted:     #7A91A0;
+  --color-border:         #D4E2EC;
+  --color-border-strong:  var(--sky);
+
+  /* ── Advisory colors ── */
+  --onset-true:   #2E7D52;   /* Green — safe to plant */
+  --onset-false:  #C0392B;   /* Red — false onset */
+  --onset-none:   #567C8D;   /* Teal — no onset */
+  --irrigate:     #2F4156;   /* Navy — irrigation advisory */
+
+  /* ── Typography ── */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body:    'Source Sans 3', system-ui, sans-serif;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-page:        #1A2530;
+    --color-bg-card:        #243040;
+    --color-bg-input:       #2D3E4E;
+    --color-text-primary:   #E8F0F5;
+    --color-text-secondary: #8BAFC0;
+    --color-text-muted:     #7A91A0;
+    --color-border:         #3A5060;
+    --color-border-strong:  #4A6878;
+    
+    --navy:     #C8D9E6; /* Reverse contrast for navy in dark mode if used specifically */
+    --teal:     #7AAFC2;
+    --sky:      #4A6878;
+  }
 }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: 'Outfit', sans-serif;
-    background: var(--bg-gradient);
-    color: var(--text-primary);
-    min-height: 100vh;
-    padding-bottom: 3rem;
-    overflow-x: hidden;
+    background-color: var(--color-bg-page);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Typography */
-h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
-p { line-height: 1.6; }
-.text-muted { color: var(--text-secondary) !important; }
-
-/* Glassmorphism Cards */
-.glass-panel {
-    background: var(--card-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--card-border);
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: var(--shadow-lg);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+h1, h2, h3, h4, .wordmark {
+    font-family: var(--font-display);
+    color: var(--color-text-primary);
+    font-weight: 600;
 }
 
-.glass-panel:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-}
+/* ── Container & Hero ── */
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 
-/* Animations */
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-fade-in { animation: fadeIn 0.8s ease forwards; }
-
-/* Status Colors */
-.status-green { border-left: 4px solid var(--accent-green); }
-.status-red { border-left: 4px solid var(--accent-red); }
-.status-yellow { border-left: 4px solid var(--accent-yellow); }
-.status-orange { border-left: 4px solid var(--accent-orange); }
-.status-blue { border-left: 4px solid var(--accent-blue); }
-
-/* Forecast Risk Strip */
-.risk-strip {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-}
-.risk-day {
-    flex: 1;
-    min-width: 60px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    padding: 0.75rem 0.5rem;
+.hero {
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--color-border);
 }
-.risk-day:hover {
-    background: rgba(255,255,255,0.08);
-}
-.risk-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    box-shadow: 0 0 10px currentColor;
-}
-.risk-dot.low { color: var(--accent-green); background: var(--accent-green); }
-.risk-dot.medium { color: var(--accent-yellow); background: var(--accent-yellow); }
-.risk-dot.high { color: var(--accent-orange); background: var(--accent-orange); }
-.risk-dot.critical { color: var(--accent-red); background: var(--accent-red); }
 
-/* Buttons & Inputs */
-.premium-btn {
-    background: linear-gradient(135deg, var(--accent-blue), #2563eb);
-    color: white;
+.hero h1 {
+    font-size: 3rem;
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+}
+
+.hero p {
+    color: var(--color-text-secondary);
+    font-size: 1.2rem;
+}
+
+/* ── UI Elements ── */
+.glass-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card:hover { border-color: var(--teal); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+
+label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-primary);
+}
+
+input, select {
+    width: 100%;
+    padding: 1rem;
+    background: var(--color-bg-input);
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: 8px;
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    margin-bottom: 1rem;
+}
+input:focus, select:focus { outline: none; border-color: var(--teal); }
+
+.btn {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background: var(--navy);
+    color: var(--white);
     border: none;
-    padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 1.1rem;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+    transition: all 0.2s;
+    text-align: center;
+    font-family: var(--font-body);
 }
-.premium-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-.premium-input {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--card-border);
-    color: white;
-    padding: 0.75rem;
+
+.btn:hover { background: var(--teal); transform: translateY(-2px); }
+.btn-secondary { background: var(--teal); }
+.btn-secondary:hover { background: var(--navy); }
+
+/* ── Advisory Banners ── */
+.nav-toggles { float: right; }
+.nav-toggles a { color: var(--color-text-secondary); text-decoration: none; margin-left: 1rem; font-weight: 500; }
+.nav-toggles a:hover { color: var(--navy); }
+
+.advisory-banner {
+    padding: 1.5rem;
     border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border-left: 6px solid;
+    background: var(--color-bg-card);
+    border-top: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+}
+.advisory-banner h3 {
+    margin-bottom: 0.5rem;
+    color: var(--navy);
+}
+
+.banner-true { border-left-color: var(--onset-true); }
+.banner-false { border-left-color: var(--onset-false); }
+.banner-none { border-left-color: var(--onset-none); }
+.banner-irrigate { border-left-color: var(--irrigate); }
+
+/* ── 7-Day Risk Forecast Strip ── */
+.risk-strip {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+}
+.risk-pill {
+    flex: 1;
+    min-width: 80px;
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    text-align: center;
+}
+.risk-pill span { display: block; }
+.risk-day { font-weight: 600; font-size: 0.9rem; color: var(--color-text-secondary); }
+.risk-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin: 0.5rem 0; }
+.risk-val { font-size: 0.85rem; color: var(--color-text-primary); font-family: monospace;}
+
+.dot-green { background-color: var(--onset-true); }
+.dot-amber { background-color: #F39C12; }
+.dot-red { background-color: var(--onset-false); }
+
+.chart-container {
     width: 100%;
-    outline: none;
-    transition: border-color 0.2s;
-}
-.premium-input:focus { border-color: var(--accent-blue); }
-
-/* Utils */
-.glow-text {
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    height: 300px;
+    margin-top: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--color-bg-card);
 }
 
-/* Header */
-.app-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 0;
-    border-bottom: 1px solid var(--card-border);
-    margin-bottom: 2rem;
+.spinner {
+    display: none;
+    width: 40px; height: 40px;
+    border: 4px solid var(--color-border);
+    border-top: 4px solid var(--teal);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 2rem auto;
 }
-.app-brand {
-    font-size: 1.5rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: -webkit-linear-gradient(#f8fafc, #94a3b8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.crop-card { margin-bottom: 1.5rem; }
+.crop-badge {
+    background: var(--teal);
+    color: var(--white);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: inline-block;
 }

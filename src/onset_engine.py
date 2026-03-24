@@ -2,11 +2,13 @@
 onset_engine.py
 ================
 Implements True/False onset detection logic with ML enhancements.
+Refactored to accept dynamic crop thresholds spanning all Kenya crops.
 """
 
 import pandas as pd
 from enum import Enum
-from ml_model import build_features, predict_onset_ml
+from src.ml_model import build_features, predict_onset_ml
+from src.crop_registry import get_crop_thresholds, get_crop
 
 class OnsetResult(Enum):
     TRUE_ONSET = "True Onset"
@@ -15,15 +17,12 @@ class OnsetResult(Enum):
     INSUFFICIENT_DATA = "Insufficient Data"
     UNCERTAIN = "UNCERTAIN"
 
-# Thresholds
-RAINFALL_THRESHOLD_MM = 20.0
-ONSET_WINDOW_DAYS = 2
-DRY_SPELL_THRESHOLD_MM = 1.0
-DRY_SPELL_CONSECUTIVE_DAYS = 7
-VALIDATION_WINDOW_DAYS = 30
-MIN_DATA_REQUIRED = ONSET_WINDOW_DAYS + VALIDATION_WINDOW_DAYS
+# Global Constants that aren't crop specific
+DRY_SPELL_THRESHOLD_MM = 1.0 # agronomic source: rainfall intensity under 1mm mostly lost to evaporation
+VALIDATION_WINDOW_DAYS = 30  # agronomic source: early vegetative stage monitoring window
 
-def detect_dry_spell(rain_series: pd.Series, threshold_mm=DRY_SPELL_THRESHOLD_MM, consecutive_days=DRY_SPELL_CONSECUTIVE_DAYS) -> bool:
+def detect_dry_spell(rain_series: pd.Series, threshold_mm: float, consecutive_days: int) -> bool:
+    """Scans forward to identify false onsets triggered by sudden dry spells."""
     consecutive = 0
     for value in rain_series:
         if pd.isna(value) or float(value) < threshold_mm:
@@ -34,35 +33,52 @@ def detect_dry_spell(rain_series: pd.Series, threshold_mm=DRY_SPELL_THRESHOLD_MM
             consecutive = 0
     return False
 
-def compute_rolling_sum(rain_series: pd.Series, window=ONSET_WINDOW_DAYS) -> pd.Series:
+def compute_rolling_sum(rain_series: pd.Series, window: int) -> pd.Series:
+    """Computes the accumulation of water over the planting window."""
     return rain_series.rolling(window=window, min_periods=1).sum()
 
-def find_onset_candidates(rain_series: pd.Series, threshold_mm=RAINFALL_THRESHOLD_MM, window_days=ONSET_WINDOW_DAYS) -> pd.Series:
+def find_onset_candidates(rain_series: pd.Series, threshold_mm: float, window_days: int) -> pd.Series:
+    """Finds exact dates where the accumulation breached the crop's unique threshold."""
     rolling_sum = compute_rolling_sum(rain_series, window_days)
     return rolling_sum >= threshold_mm
 
-def classify_onset(climate: dict) -> dict:
+def classify_onset(climate: dict, crop_key: str = "maize") -> dict:
+    """
+    Main entrypoint. Evaluates the climate arrays against the exact
+    agronomic rules for the user's selected crop.
+    """
     rain_series = climate.get("precipitation", pd.Series(dtype=float))
     
-    if len(rain_series) < MIN_DATA_REQUIRED:
+    # Grab the specific threshold parameters for this crop
+    crop_data = get_crop(crop_key)
+    thresholds = get_crop_thresholds(crop_key)
+    
+    ONSET_THRESHOLD_MM = thresholds["onset_threshold_mm"]
+    ONSET_WINDOW_DAYS = thresholds["onset_window_days"]
+    DRY_SPELL_CONSECUTIVE_DAYS = thresholds["dry_spell_days"]
+    
+    min_data_required = ONSET_WINDOW_DAYS + VALIDATION_WINDOW_DAYS
+    display_name = crop_data["display_name"]
+    
+    if len(rain_series) < min_data_required:
         return {
             "result": OnsetResult.INSUFFICIENT_DATA.value,
-            "color": "yellow",
-            "summary": "Not enough data. At least 32 days required.",
+            "color": "none", 
+            "summary": f"Not enough data to run onset checks for {display_name}. At least {min_data_required} days required.",
             "ml_metadata": None,
             "chart_data": {}
         }
 
-    candidates_mask = find_onset_candidates(rain_series)
+    candidates_mask = find_onset_candidates(rain_series, ONSET_THRESHOLD_MM, ONSET_WINDOW_DAYS)
     candidate_dates = rain_series[candidates_mask].index
 
     if len(candidate_dates) == 0:
         return {
             "result": OnsetResult.NO_ONSET.value,
-            "color": "grey",
-            "summary": "No rainfall event has exceeded the 20mm threshold in the data window.",
+            "color": "none",
+            "summary": f"No rainfall event has exceeded the {ONSET_THRESHOLD_MM}mm threshold required for {display_name}.",
             "ml_metadata": None,
-            "chart_data": {"rolling_sum": compute_rolling_sum(rain_series).tolist()}
+            "chart_data": {"rolling_sum": compute_rolling_sum(rain_series, ONSET_WINDOW_DAYS).tolist()}
         }
 
     for onset_date in reversed(candidate_dates):
@@ -73,7 +89,7 @@ def classify_onset(climate: dict) -> dict:
         validation_end = onset_date + pd.Timedelta(days=VALIDATION_WINDOW_DAYS)
         validation_window = rain_series[(rain_series.index > onset_date) & (rain_series.index <= validation_end)]
 
-        dry_spell = detect_dry_spell(validation_window)
+        dry_spell = detect_dry_spell(validation_window, DRY_SPELL_THRESHOLD_MM, DRY_SPELL_CONSECUTIVE_DAYS)
         rule_based_result = "False Onset" if dry_spell else "True Onset"
         
         # Build ML features and predict
@@ -85,14 +101,14 @@ def classify_onset(climate: dict) -> dict:
 
         # Formulate output based on final classification
         if classification == "False Onset":
-            color = "red"
-            summary = f"WARNING — FALSE ONSET (Confidence: {confidence*100:.0f}%). A {round(cumulative, 1)}mm event occurred but dry spell risk is severe. DO NOT plant."
+            color = "false"
+            summary = f"WARNING — FALSE ONSET (Confidence: {confidence*100:.0f}%). A {round(cumulative, 1)}mm event occurred but a devastating {DRY_SPELL_CONSECUTIVE_DAYS}-day dry spell threatens {display_name} germination. DO NOT plant."
         elif classification == "True Onset":
-            color = "green"
-            summary = f"TRUE ONSET (Confidence: {confidence*100:.0f}%). Rains confirmed with {round(cumulative, 1)}mm. SAFE TO PLANT."
+            color = "true"
+            summary = f"TRUE ONSET (Confidence: {confidence*100:.0f}%). Rains confirmed with {round(cumulative, 1)}mm over {ONSET_WINDOW_DAYS} days. Suitable for {display_name}. SAFE TO PLANT."
         else:
-            color = "orange"
-            summary = f"UNCERTAIN CONDITIONS (Confidence: {confidence*100:.0f}%). Rule engine and ML model disagree. Wait 3 more days before planting."
+            color = "uncertain"
+            summary = f"UNCERTAIN CONDITIONS (Confidence: {confidence*100:.0f}%). Rule engine and ML disagree around {display_name} tolerance. Wait 3 more days."
 
         return {
             "result": classification,
@@ -101,13 +117,15 @@ def classify_onset(climate: dict) -> dict:
             "color": color,
             "summary": summary,
             "ml_metadata": ml_eval,
-            "chart_data": {"rolling_sum": compute_rolling_sum(rain_series).tolist()}
+            "crop": crop_data,
+            "chart_data": {"rolling_sum": compute_rolling_sum(rain_series, ONSET_WINDOW_DAYS).tolist()}
         }
 
     return {
         "result": OnsetResult.NO_ONSET.value,
-        "color": "grey",
+        "color": "none",
         "summary": "No conclusive onset detected.",
         "ml_metadata": None,
-        "chart_data": {"rolling_sum": compute_rolling_sum(rain_series).tolist()}
+        "crop": crop_data,
+        "chart_data": {"rolling_sum": compute_rolling_sum(rain_series, ONSET_WINDOW_DAYS).tolist()}
     }

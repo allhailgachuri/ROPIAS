@@ -6,13 +6,14 @@
 // --- State ---
 let currentLang = 'en';
 let chartInstance = null;
+let cropsData = {};
 
 const dict = {
     en: {
         'location_setup': '📍 Location Setup',
         'city_search': 'City or Town',
         'use_gps': 'Use My GPS',
-        'crop_type': 'Crop Type',
+        'crop_type': 'Active Crop',
         'analyze_btn': 'Analyze Farm →',
         'analyzing': 'Connecting to NASA POWER API...'
     },
@@ -27,9 +28,19 @@ const dict = {
 };
 
 // --- Initialization ---
-document.getElementById('lang-toggle').addEventListener('click', () => {
-    currentLang = currentLang === 'en' ? 'sw' : 'en';
-    applyTranslations();
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const res = await fetch('/api/crops');
+        const data = await res.json();
+        cropsData = data.categories;
+        populateCropSelect();
+    } catch(e) { console.error("Failed to load crops", e); }
+    
+    // Bind Translation Toggle
+    document.getElementById('lang-toggle').addEventListener('click', () => {
+        currentLang = currentLang === 'en' ? 'sw' : 'en';
+        applyTranslations();
+    });
 });
 
 function applyTranslations() {
@@ -39,6 +50,47 @@ function applyTranslations() {
             el.innerText = dict[currentLang][key];
         }
     });
+}
+
+function populateCropSelect() {
+    const select = document.getElementById('crop-select');
+    if(!select) return; // If on another page
+    
+    select.innerHTML = '';
+    
+    for (const [category, crops] of Object.entries(cropsData)) {
+        const group = document.createElement('optgroup');
+        group.label = category;
+        crops.forEach(crop => {
+            const opt = document.createElement('option');
+            opt.value = crop.id;
+            opt.textContent = crop.display_name;
+            group.appendChild(opt);
+        });
+        select.appendChild(group);
+    }
+    
+    select.addEventListener('change', updateCropInfo);
+    if(select.options.length > 0) updateCropInfo();
+}
+
+function updateCropInfo() {
+    const val = document.getElementById('crop-select').value;
+    let selectedCrop = null;
+    
+    for (const crops of Object.values(cropsData)) {
+        const found = crops.find(c => c.id === val);
+        if(found) { selectedCrop = found; break; }
+    }
+    
+    if(selectedCrop) {
+        document.getElementById('crop-info-card').classList.remove('d-none');
+        document.getElementById('info-crop-name').innerHTML = `<i class="fa-solid fa-seedling" style="color: var(--teal);"></i> ${selectedCrop.display_name}`;
+        document.getElementById('info-crop-desc').innerText = selectedCrop.description;
+        document.getElementById('info-moisture').innerText = `${selectedCrop.optimal_moisture_min*100}% - ${selectedCrop.optimal_moisture_max*100}%`;
+        document.getElementById('info-stages').innerText = selectedCrop.water_sensitive_stages.map(s => s.replace('_', ' ')).join(', ');
+        document.getElementById('info-season').innerText = selectedCrop.planting_season.map(s => s.replace('_', ' ')).join(', ');
+    }
 }
 
 // --- Geolocation ---
@@ -62,17 +114,17 @@ async function analyzeData() {
     const city = document.getElementById('city-input').value;
     const lat = document.getElementById('lat-input').value;
     const lon = document.getElementById('lon-input').value;
+    const crop = document.getElementById('crop-select').value || "maize";
 
     if (!city && (!lat || !lon)) {
         alert("Please enter a city or GPS coordinates.");
         return;
     }
 
-    // Toggle UI State
     document.getElementById('results').classList.add('d-none');
     document.getElementById('loading').classList.remove('d-none');
 
-    const payload = city ? { city } : { latitude: parseFloat(lat), longitude: parseFloat(lon) };
+    const payload = city ? { city, crop } : { latitude: parseFloat(lat), longitude: parseFloat(lon), crop };
 
     try {
         const res = await fetch('/analyze', {
@@ -83,7 +135,6 @@ async function analyzeData() {
 
         const data = await res.json();
         if (res.ok) {
-            // Update Inputs to show returned coordinates if city was used
             if(data.location) {
                 document.getElementById('lat-input').value = (data.location.latitude).toFixed(4);
                 document.getElementById('lon-input').value = (data.location.longitude).toFixed(4);
@@ -105,7 +156,7 @@ async function analyzeData() {
 function populateDashboard(data) {
     // Onset Panel
     const onsetDiv = document.getElementById('onset-panel');
-    onsetDiv.className = `glass-panel mb-4 animate-slide-up status-${data.onset.color}`;
+    onsetDiv.className = `advisory-banner banner-${data.onset.color}`;
     document.getElementById('onset-title').innerText = data.onset.result;
     document.getElementById('onset-summary').innerText = data.onset.summary;
     
@@ -118,14 +169,21 @@ function populateDashboard(data) {
 
     // Irrigation Panel
     const irrDiv = document.getElementById('irrigation-panel');
-    irrDiv.className = `glass-panel h-100 animate-slide-up status-${data.irrigation.color}`;
-    document.getElementById('soil-pct').innerHTML = `${data.irrigation.moisture_percent}% <span class="fs-6 text-muted">${data.irrigation.moisture_category}</span>`;
+    let bannerColor = data.irrigation.color;
+    if (bannerColor === 'none') bannerColor = 'true';
+    irrDiv.className = `glass-card h-100 advisory-banner banner-${bannerColor}`;
     
-    const trendIcon = data.irrigation.trend === 'rising' ? 'fa-arrow-trend-up text-success' : 
-                      data.irrigation.trend === 'falling' ? 'fa-arrow-trend-down text-danger' : 
-                      'fa-arrows-left-right text-muted';
+    document.getElementById('soil-pct').innerText = `${data.irrigation.moisture_percent}%`;
+    document.getElementById('soil-cat').innerText = data.irrigation.moisture_category;
     
-    document.getElementById('soil-trend').innerHTML = `<i class="fa-solid ${trendIcon}"></i> Trend: ${data.irrigation.trend.charAt(0).toUpperCase() + data.irrigation.trend.slice(1)}`;
+    let trendIcon = 'fa-arrows-left-right text-muted';
+    let trendColor = 'var(--teal)';
+    if (data.irrigation.trend === 'rising') { trendIcon = 'fa-arrow-trend-up'; trendColor = 'var(--onset-true)'; }
+    if (data.irrigation.trend === 'falling') { trendIcon = 'fa-arrow-trend-down'; trendColor = 'var(--onset-false)'; }
+    
+    document.getElementById('soil-trend').innerHTML = `<i class="fa-solid ${trendIcon}" style="color: ${trendColor}"></i> Trend: ${data.irrigation.trend.charAt(0).toUpperCase() + data.irrigation.trend.slice(1)}`;
+    document.getElementById('soil-trend').style.color = trendColor;
+    
     document.getElementById('irrigation-summary').innerText = data.irrigation.summary;
 
     // Chart
@@ -152,16 +210,15 @@ async function fetchForecast(lat, lon) {
                 dayDate.setDate(today.getDate() + i + 1);
                 const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
                 
-                let dotClass = 'low';
-                if(score > 70) dotClass = 'critical';
-                else if (score > 40) dotClass = 'high';
-                else if (score > 20) dotClass = 'medium';
+                let dotClass = 'dot-green';
+                if(score > 70) dotClass = 'dot-red';
+                else if (score > 40) dotClass = 'dot-amber';
                 
                 strip.innerHTML += `
-                    <div class="risk-day">
-                        <span class="small fw-bold">${dayName}</span>
+                    <div class="risk-pill">
+                        <span class="risk-day">${dayName}</span>
                         <div class="risk-dot ${dotClass}"></div>
-                        <span class="small text-muted">${score}</span>
+                        <span class="risk-val">Risk ${score}</span>
                     </div>
                 `;
             });
@@ -175,6 +232,12 @@ function drawChart(labels, rainData, soilData) {
     
     if (chartInstance) { chartInstance.destroy(); }
     
+    const style = getComputedStyle(document.body);
+    const navy = style.getPropertyValue('--navy').trim() || '#2F4156';
+    const teal = style.getPropertyValue('--teal').trim() || '#567C8D';
+    const sky = style.getPropertyValue('--sky').trim() || '#C8D9E6';
+    const textPrimary = style.getPropertyValue('--color-text-primary').trim() || '#333';
+    
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -183,7 +246,7 @@ function drawChart(labels, rainData, soilData) {
                 {
                     label: 'Rainfall (mm)',
                     data: rainData,
-                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    backgroundColor: navy,
                     borderRadius: 4,
                     order: 2,
                     yAxisID: 'y'
@@ -192,8 +255,8 @@ function drawChart(labels, rainData, soilData) {
                     label: 'Soil Moisture (%)',
                     data: soilData,
                     type: 'line',
-                    borderColor: 'rgba(16, 185, 129, 1)',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderColor: teal,
+                    backgroundColor: `${sky}40`, // 40 is hex opacity
                     borderWidth: 2,
                     tension: 0.4,
                     fill: true,
@@ -204,14 +267,15 @@ function drawChart(labels, rainData, soilData) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-                y: { type: 'linear', display: true, position: 'left', title: {display: true, text: 'Rain (mm)', color: '#94a3b8'} },
-                y1: { type: 'linear', display: true, position: 'right', min: 0, max: 100, grid: {drawOnChartArea: false}, title: {display: true, text: 'Moisture (%)', color: '#94a3b8'} },
-                x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+                y: { type: 'linear', display: true, position: 'left', title: {display: true, text: 'Rain (mm)', color: textPrimary} },
+                y1: { type: 'linear', display: true, position: 'right', min: 0, max: 100, grid: {drawOnChartArea: false}, title: {display: true, text: 'Moisture (%)', color: textPrimary} },
+                x: { grid: { color: 'rgba(0,0,0,0.05)' } }
             },
             plugins: {
-                legend: { labels: { color: '#f8fafc' } }
+                legend: { labels: { color: textPrimary, font: {family: "'Source Sans 3', sans-serif"} } }
             }
         }
     });
@@ -220,7 +284,7 @@ function drawChart(labels, rainData, soilData) {
 // --- Utilities ---
 function shareDashboard() {
     html2canvas(document.getElementById('capture-area'), {
-        backgroundColor: '#0f172a',
+        backgroundColor: getComputedStyle(document.body).getPropertyValue('--color-bg-page').trim(),
         scale: 2
     }).then(canvas => {
         const link = document.createElement('a');
@@ -251,9 +315,4 @@ async function subscribeAlert() {
     } catch(e) {
         alert("Failed to subscribe: " + e.message);
     }
-}
-
-// PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-    // window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
 }

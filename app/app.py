@@ -24,6 +24,7 @@ from src.irrigation_engine import classify_soil_moisture
 from src.location_utils import get_coordinates_from_city
 from src.forecast_engine import compute_planting_risk_score
 from src.historical_engine import analyze_historical_season
+from src.crop_registry import get_crops_by_category
 
 # DB and Alerts
 from database.db import db, AlertSubscription, Query, ApiCache, HistoricalOnset
@@ -34,7 +35,13 @@ CORS(app)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f"sqlite:///{os.path.join(basedir, '..', 'database', 'ropias.db')}")
+
+# Workaround for SQLite C-library path encoding bug with emojis
+safe_db_dir = os.path.expanduser('~/.ropias/database')
+os.makedirs(safe_db_dir, exist_ok=True)
+db_path = os.path.join(safe_db_dir, 'ropias.db').replace('\\', '/')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -68,6 +75,7 @@ def api_docs():
 @app.route("/analyze", methods=["POST"])
 def analyze():
     body = request.get_json()
+    crop_key = body.get("crop", "maize")
     
     # Check if city or coords provided
     city = body.get("city")
@@ -99,8 +107,8 @@ def analyze():
     # Extract 7-day forecast arrays
     rain_forecast = forecast["precipitation"].tail(7).values.tolist() if len(forecast["precipitation"]) >= 7 else []
 
-    onset = classify_onset(climate)
-    irrigation = classify_soil_moisture(climate, rain_forecast)
+    onset = classify_onset(climate, crop_key=crop_key)
+    irrigation = classify_soil_moisture(climate, rain_forecast, crop_key=crop_key)
 
     # Save Query to DB
     try:
@@ -133,6 +141,11 @@ def analyze():
             "soil_moisture": [round(float(v)*100, 1) if str(v) != 'nan' else None for v in soil_14.values]
         }
     })
+
+
+@app.route("/api/crops", methods=["GET"])
+def api_crops():
+    return jsonify({"categories": get_crops_by_category()})
 
 
 @app.route("/api/forecast", methods=["POST"])
