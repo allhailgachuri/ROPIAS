@@ -1,639 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ROPIAS — Rainfall Onset Prediction & Irrigation Advisory</title>
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
-  <!-- Bootstrap 5 -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  <style>
-    :root {
-      --earth-dark:    #0D1F0F;
-      --earth-mid:     #1A3A1C;
-      --earth-accent:  #2D5A30;
-      --rain-blue:     #4A90D9;
-      --rain-light:    #A8D5F5;
-      --soil-green:    #5BB55E;
-      --soil-light:    #C8F0C9;
-      --alert-red:     #E84040;
-      --alert-amber:   #F5A623;
-      --alert-green:   #27AE60;
-      --text-primary:  #F0F7F0;
-      --text-muted:    #8AAB8C;
-      --card-bg:       rgba(26, 58, 28, 0.6);
-      --card-border:   rgba(91, 181, 94, 0.2);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background-color: var(--earth-dark);
-      background-image:
-        radial-gradient(ellipse at 20% 20%, rgba(45, 90, 48, 0.3) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 80%, rgba(74, 144, 217, 0.15) 0%, transparent 50%);
-      color: var(--text-primary);
-      font-family: 'DM Sans', sans-serif;
-      min-height: 100vh;
-    }
-
-    /* ── Header ── */
-    .ropias-header {
-      padding: 2rem 0 1rem;
-      text-align: center;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    .ropias-header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      color: var(--soil-green);
-      letter-spacing: -0.02em;
-    }
-
-    .ropias-header p {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      margin-top: 0.4rem;
-    }
-
-    .nasa-badge {
-      display: inline-block;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      color: var(--rain-light);
-      background: rgba(74, 144, 217, 0.15);
-      border: 1px solid rgba(74, 144, 217, 0.3);
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-      margin-top: 0.5rem;
-    }
-
-    /* ── Cards ── */
-    .ropias-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      backdrop-filter: blur(10px);
-      padding: 1.5rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .card-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--text-muted);
-      margin-bottom: 0.75rem;
-    }
-
-    /* ── Input form ── */
-    .coord-input {
-      background: rgba(13, 31, 15, 0.8);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1rem;
-      padding: 0.65rem 1rem;
-      width: 100%;
-      transition: border-color 0.2s;
-    }
-
-    .coord-input:focus {
-      outline: none;
-      border-color: var(--soil-green);
-      background: rgba(13, 31, 15, 0.95);
-    }
-
-    .coord-input::placeholder { color: var(--text-muted); }
-
-    label {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 0.3rem;
-      display: block;
-    }
-
-    .btn-analyze {
-      background: var(--soil-green);
-      border: none;
-      border-radius: 8px;
-      color: var(--earth-dark);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: 1rem;
-      padding: 0.75rem 2rem;
-      width: 100%;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      margin-top: 1rem;
-    }
-
-    .btn-analyze:hover  { background: var(--alert-green); }
-    .btn-analyze:active { transform: scale(0.98); }
-    .btn-analyze:disabled {
-      background: var(--earth-accent);
-      color: var(--text-muted);
-      cursor: not-allowed;
-    }
-
-    /* ── Advisory banner ── */
-    .advisory-banner {
-      border-radius: 10px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 1.25rem;
-      display: none;
-      border-left: 4px solid;
-    }
-
-    .advisory-banner.green {
-      background: rgba(39, 174, 96, 0.15);
-      border-color: var(--alert-green);
-    }
-
-    .advisory-banner.red {
-      background: rgba(232, 64, 64, 0.15);
-      border-color: var(--alert-red);
-    }
-
-    .advisory-banner.grey {
-      background: rgba(138, 171, 140, 0.1);
-      border-color: var(--text-muted);
-    }
-
-    .advisory-banner.yellow {
-      background: rgba(245, 166, 35, 0.15);
-      border-color: var(--alert-amber);
-    }
-
-    .advisory-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.3rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .advisory-text {
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: var(--text-primary);
-    }
-
-    /* ── Irrigation banner ── */
-    .irrigation-banner {
-      border-radius: 10px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.25rem;
-      display: none;
-      border-left: 4px solid var(--rain-blue);
-      background: rgba(74, 144, 217, 0.12);
-    }
-
-    /* ── Stats row ── */
-    .stat-pill {
-      background: rgba(13, 31, 15, 0.6);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.4rem;
-      font-weight: 500;
-      color: var(--soil-green);
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.2rem;
-    }
-
-    /* ── Gauge ── */
-    .gauge-container {
-      position: relative;
-      height: 140px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .gauge-value {
-      position: absolute;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.8rem;
-      font-weight: 500;
-      color: var(--soil-green);
-    }
-
-    .gauge-label {
-      position: absolute;
-      bottom: 10px;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    /* ── Loading spinner ── */
-    .spinner {
-      display: none;
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255,255,255,0.2);
-      border-top-color: var(--earth-dark);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Error ── */
-    .error-box {
-      background: rgba(232, 64, 64, 0.1);
-      border: 1px solid var(--alert-red);
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
-      font-size: 0.875rem;
-      display: none;
-    }
-
-    /* ── Disclaimer ── */
-    .disclaimer {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      border-top: 1px solid var(--card-border);
-      padding-top: 0.75rem;
-      margin-top: 0.75rem;
-      line-height: 1.5;
-    }
-
-    /* ── Footer ── */
-    footer {
-      text-align: center;
-      padding: 2rem 0;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      border-top: 1px solid var(--card-border);
-      margin-top: 2rem;
-    }
-
-    footer a { color: var(--rain-light); text-decoration: none; }
-
-    /* ── Responsive ── */
-    @media (max-width: 576px) {
-      .ropias-header h1 { font-size: 1.6rem; }
-      .ropias-card { padding: 1rem; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROPIAS | Farmer Dashboard</title>
+    <!-- Bootstrap grid & utilities -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/ropias.css">
 </head>
-
 <body>
-  <div class="container" style="max-width: 860px;">
 
-    <!-- Header -->
-    <header class="ropias-header">
-      <h1>🌧️ ROPIAS</h1>
-      <p>Rainfall Onset Prediction & Irrigation Advisory System</p>
-      <span class="nasa-badge">Powered by NASA POWER Satellite Data</span>
+<div class="container animate-fade-in" id="capture-area">
+    
+    <header class="app-header">
+        <div class="app-brand">
+            <i class="fa-solid fa-cloud-sun-rain text-primary"></i> 
+            ROPIAS
+        </div>
+        <div class="d-flex gap-3 align-items-center">
+            <button id="lang-toggle" class="btn btn-outline-light btn-sm rounded-pill px-3">EN | SW</button>
+            <button class="btn btn-outline-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#smsModal">
+                <i class="fa-solid fa-bell"></i> Subscribe
+            </button>
+        </div>
     </header>
 
-    <div style="padding: 1.5rem 0;">
+    <div class="row g-4 mb-4">
+        <!-- Input Section -->
+        <div class="col-12 col-lg-4">
+            <div class="glass-panel h-100 animate-slide-up" style="animation-delay: 0.1s;">
+                <h4 class="mb-3" data-i18n="location_setup">📍 Location Setup</h4>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small" data-i18n="city_search">City or Town</label>
+                    <input type="text" id="city-input" class="premium-input" placeholder="e.g. Nakuru">
+                </div>
+                
+                <div class="d-flex align-items-center my-3">
+                    <hr class="flex-grow-1 border-secondary">
+                    <span class="px-2 text-muted small">OR</span>
+                    <hr class="flex-grow-1 border-secondary">
+                </div>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label text-muted small">Latitude</label>
+                        <input type="number" id="lat-input" class="premium-input" step="0.0001" placeholder="-0.28">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted small">Longitude</label>
+                        <input type="number" id="lon-input" class="premium-input" step="0.0001" placeholder="36.07">
+                    </div>
+                </div>
 
-      <!-- Input Card -->
-      <div class="ropias-card">
-        <div class="card-label">📍 Farm Location (GPS Coordinates)</div>
-        <div class="row g-3">
-          <div class="col-sm-5">
-            <label for="lat">Latitude</label>
-            <input type="number" id="lat" class="coord-input"
-                   placeholder="e.g. 0.28" step="0.01"
-                   min="-5" max="5" />
-          </div>
-          <div class="col-sm-5">
-            <label for="lon">Longitude</label>
-            <input type="number" id="lon" class="coord-input"
-                   placeholder="e.g. 34.75" step="0.01"
-                   min="34" max="42" />
-          </div>
-          <div class="col-sm-2 d-flex align-items-end">
-            <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
-              <span id="btnText">Analyze</span>
-              <div class="spinner" id="spinner"></div>
-            </button>
-          </div>
+                <div class="mb-4">
+                    <button class="btn btn-outline-secondary w-100 mb-2" onclick="useGPS()">
+                        <i class="fa-solid fa-location-crosshairs"></i> <span data-i18n="use_gps">Use My GPS</span>
+                    </button>
+                    
+                    <label class="form-label text-muted small mt-2" data-i18n="crop_type">Crop Type</label>
+                    <select class="premium-input mb-3" id="crop-select">
+                        <option value="maize">Maize</option>
+                        <option value="beans">Beans</option>
+                        <option value="sorghum">Sorghum</option>
+                    </select>
+
+                    <button class="premium-btn w-100 justify-content-center" onclick="analyzeData()" id="analyze-btn">
+                        <i class="fa-solid fa-chart-line"></i> <span data-i18n="analyze_btn">Analyze Farm →</span>
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="error-box mt-2" id="errorBox"></div>
-        <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.75rem;">
-          Kenya only. Latitude: −5 to 5 &nbsp;|&nbsp; Longitude: 34 to 42
-        </p>
+
+        <!-- Dashboard Outputs -->
+        <div class="col-12 col-lg-8">
+            <div id="loading" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-3 text-muted" data-i18n="analyzing">Connecting to NASA POWER API...</p>
+            </div>
+
+            <div id="results" class="d-none">
+                <!-- Primary Advisory -->
+                <div class="glass-panel mb-4 animate-slide-up status-green" id="onset-panel" style="animation-delay: 0.2s;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h3 id="onset-title" class="mb-0">✅ TRUE ONSET</h3>
+                        <span class="badge bg-secondary" id="onset-confidence">ML Conf: 85%</span>
+                    </div>
+                    <p id="onset-summary" class="text-muted fs-5">Rains confirmed. Safe to plant this week.</p>
+                </div>
+
+                <!-- Secondary Modifiers -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="glass-panel h-100 animate-slide-up status-blue" id="irrigation-panel" style="animation-delay: 0.3s;">
+                            <h5 class="mb-1"><i class="fa-solid fa-droplet text-info pt-1"></i> Soil Moisture</h5>
+                            <h3 id="soil-pct" class="mb-0 mt-2">54% <span class="fs-6 text-muted">Optimal</span></h3>
+                            <p id="soil-trend" class="text-muted small mt-1"><i class="fa-solid fa-arrow-trend-up text-success"></i> Trend: Rising</p>
+                            <p id="irrigation-summary" class="small mb-0 mt-3 border-top border-secondary pt-2">No irrigation needed today.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="glass-panel h-100 animate-slide-up" style="animation-delay: 0.4s;">
+                            <h5 class="mb-2"><i class="fa-solid fa-calendar-days text-warning pt-1"></i> 7-Day Risk Forecast</h5>
+                            <div class="risk-strip mt-3" id="forecast-strip">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="glass-panel animate-slide-up" style="animation-delay: 0.5s;">
+                    <h5 class="mb-3">14-Day Climate Trends</h5>
+                    <canvas id="trendsChart" height="100"></canvas>
+                </div>
+                
+                <!-- Utilities -->
+                <div class="d-flex gap-2 justify-content-end mt-4">
+                    <a href="/officer" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-users"></i> Officer View</a>
+                    <a href="/historical" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-timeline"></i> History</a>
+                    <button class="btn btn-outline-light btn-sm" onclick="shareDashboard()"><i class="fa-solid fa-share-nodes"></i> Share As Image</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SMS Subscription Modal -->
+<div class="modal fade" id="smsModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-light" style="background: var(--bg-dark); border: 1px solid var(--card-border);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title"><i class="fa-solid fa-bell text-warning"></i> Get Daily Alerts</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-
-      <!-- Results section (hidden until analysis runs) -->
-      <div id="results" style="display:none;">
-
-        <!-- Onset Advisory Banner -->
-        <div class="advisory-banner" id="onsetBanner">
-          <div class="advisory-title" id="onsetTitle"></div>
-          <div class="advisory-text" id="onsetText"></div>
-          <div class="disclaimer">
-            ⚠️ Results are generated from satellite data and should be used
-            alongside local field observations. Do not make planting decisions
-            based solely on this system.
-          </div>
+      <div class="modal-body">
+        <p class="text-muted small">Receive SMS alerts when True Onsets are detected or when your farm reaches critical dryness thresholds.</p>
+        <div class="mb-3">
+            <label class="form-label">Phone Number (with +254)</label>
+            <input type="text" id="sub-phone" class="premium-input" placeholder="+254700000000">
         </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="premium-btn text-white" onclick="subscribeAlert()">Subscribe</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <!-- Irrigation Banner -->
-        <div class="irrigation-banner" id="irrigationBanner">
-          <div class="card-label" style="margin-bottom:0.4rem;">💧 Irrigation Advisory</div>
-          <div style="font-weight:500;" id="irrigationTitle"></div>
-          <div style="font-size:0.875rem; margin-top:0.3rem;" id="irrigationText"></div>
-        </div>
-
-        <!-- Stats Row -->
-        <div class="row g-3 mb-3" id="statsRow">
-          <div class="col-4">
-            <div class="stat-pill">
-              <div class="stat-value" id="statRain">—</div>
-              <div class="stat-label">Max Rain Day (mm)</div>
-            </div>
-          </div>
-          <div class="col-4">
-            <div class="stat-pill">
-              <div class="stat-value" id="statMoisture">—</div>
-              <div class="stat-label">Soil Moisture</div>
-            </div>
-          </div>
-          <div class="col-4">
-            <div class="stat-pill">
-              <div class="stat-value" id="statTrend">—</div>
-              <div class="stat-label">Moisture Trend</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="row g-3 mb-3">
-          <!-- Rainfall Chart -->
-          <div class="col-md-7">
-            <div class="ropias-card">
-              <div class="card-label">🌧️ 14-Day Rainfall History</div>
-              <canvas id="rainfallChart" height="200"></canvas>
-            </div>
-          </div>
-          <!-- Soil Moisture Gauge -->
-          <div class="col-md-5">
-            <div class="ropias-card">
-              <div class="card-label">🌱 Root Zone Soil Moisture</div>
-              <canvas id="soilChart" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Summary Report -->
-        <div class="ropias-card" id="summaryCard">
-          <div class="card-label">📋 System Analysis Report</div>
-          <div style="font-size:0.9rem; line-height:1.7;" id="summaryText"></div>
-          <div class="disclaimer">
-            Data source: NASA POWER API (power.larc.nasa.gov) &nbsp;|&nbsp;
-            Resolution: 0.5° × 0.5° (~50km) &nbsp;|&nbsp;
-            Latency: 24–48 hours
-          </div>
-        </div>
-
-      </div><!-- /results -->
-
-    </div><!-- /padding -->
-
-    <footer>
-      ROPIAS &nbsp;·&nbsp; KCA University BSc Data Science &nbsp;·&nbsp;
-      Data: <a href="https://power.larc.nasa.gov" target="_blank">NASA POWER</a>
-    </footer>
-
-  </div><!-- /container -->
-
-  <script>
-    let rainfallChart = null;
-    let soilChart = null;
-
-    async function runAnalysis() {
-      const lat = parseFloat(document.getElementById('lat').value);
-      const lon = parseFloat(document.getElementById('lon').value);
-
-      // ── Validate ──────────────────────────────────────────────────────────
-      const errorBox = document.getElementById('errorBox');
-      errorBox.style.display = 'none';
-
-      if (isNaN(lat) || isNaN(lon)) {
-        showError('Please enter both latitude and longitude.');
-        return;
-      }
-      if (lat < -5 || lat > 5 || lon < 34 || lon > 42) {
-        showError('Coordinates are outside Kenya. Latitude: −5 to 5, Longitude: 34 to 42.');
-        return;
-      }
-
-      // ── Loading state ─────────────────────────────────────────────────────
-      setLoading(true);
-      document.getElementById('results').style.display = 'none';
-
-      try {
-        const response = await fetch('/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latitude: lat, longitude: lon })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          showError(data.error || 'An error occurred. Please try again.');
-          return;
-        }
-
-        renderResults(data);
-
-      } catch (err) {
-        showError('Could not connect to the server. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    function renderResults(data) {
-      // ── Onset banner ──────────────────────────────────────────────────────
-      const banner = document.getElementById('onsetBanner');
-      banner.className = `advisory-banner ${data.onset.color}`;
-      banner.style.display = 'block';
-
-      const titles = {
-        'True Onset':           '✅ True Onset — Safe to Plant',
-        'False Onset':          '🚨 False Onset — Do NOT Plant',
-        'No Onset Detected':    '⏳ No Onset Detected — Wait',
-        'Insufficient Data':    '⚠️ Insufficient Data'
-      };
-      document.getElementById('onsetTitle').textContent =
-        titles[data.onset.result] || data.onset.result;
-      document.getElementById('onsetText').textContent = data.onset.summary;
-
-      // ── Irrigation banner ─────────────────────────────────────────────────
-      const irrBanner = document.getElementById('irrigationBanner');
-      irrBanner.style.display = 'block';
-      document.getElementById('irrigationTitle').textContent =
-        data.irrigation.status;
-      document.getElementById('irrigationText').textContent =
-        data.irrigation.summary;
-
-      // ── Stats ─────────────────────────────────────────────────────────────
-      const maxRain = data.chart.rainfall.length
-        ? Math.max(...data.chart.rainfall).toFixed(1)
-        : '—';
-      document.getElementById('statRain').textContent = maxRain;
-      document.getElementById('statMoisture').textContent =
-        data.irrigation.moisture_percent !== null
-          ? data.irrigation.moisture_percent + '%'
-          : '—';
-
-      const trendMap = {
-        rising:  '↑ Rising',
-        falling: '↓ Falling',
-        stable:  '→ Stable'
-      };
-      document.getElementById('statTrend').textContent =
-        trendMap[data.irrigation.trend] || '—';
-
-      // ── Summary ───────────────────────────────────────────────────────────
-      document.getElementById('summaryText').innerHTML = `
-        <strong>Onset:</strong> ${data.onset.summary}<br><br>
-        <strong>Irrigation:</strong> ${data.irrigation.summary}<br><br>
-        <strong>Location:</strong> ${data.meta.latitude}°, ${data.meta.longitude}°
-        &nbsp;|&nbsp; <strong>Period:</strong> ${data.meta.start_date} – ${data.meta.end_date}
-      `;
-
-      // ── Render charts ─────────────────────────────────────────────────────
-      renderRainfallChart(data.chart);
-      renderSoilChart(data.irrigation.gauge_data, data.chart);
-
-      document.getElementById('results').style.display = 'block';
-    }
-
-    function renderRainfallChart(chart) {
-      if (rainfallChart) rainfallChart.destroy();
-
-      const ctx = document.getElementById('rainfallChart').getContext('2d');
-      rainfallChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: chart.labels,
-          datasets: [{
-            label: 'Rainfall (mm)',
-            data: chart.rainfall,
-            backgroundColor: chart.rainfall.map(v =>
-              v >= 20 ? 'rgba(39, 174, 96, 0.85)' : 'rgba(74, 144, 217, 0.75)'
-            ),
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            annotation: {}
-          },
-          scales: {
-            x: {
-              ticks: { color: '#8AAB8C', font: { size: 10 } },
-              grid: { color: 'rgba(138,171,140,0.1)' }
-            },
-            y: {
-              ticks: { color: '#8AAB8C', font: { size: 10 } },
-              grid: { color: 'rgba(138,171,140,0.1)' },
-              title: {
-                display: true,
-                text: 'mm',
-                color: '#8AAB8C',
-                font: { size: 10 }
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function renderSoilChart(gaugeData, chart) {
-      if (soilChart) soilChart.destroy();
-
-      const ctx = document.getElementById('soilChart').getContext('2d');
-      const labels = chart.labels;
-      const values = chart.soil_moisture;
-
-      soilChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Soil Moisture (%)',
-            data: values,
-            borderColor: '#5BB55E',
-            backgroundColor: 'rgba(91,181,94,0.1)',
-            borderWidth: 2,
-            pointRadius: 3,
-            fill: true,
-            tension: 0.3
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: {
-              ticks: { color: '#8AAB8C', font: { size: 10 } },
-              grid: { color: 'rgba(138,171,140,0.1)' }
-            },
-            y: {
-              min: 0,
-              max: 100,
-              ticks: {
-                color: '#8AAB8C',
-                font: { size: 10 },
-                callback: v => v + '%'
-              },
-              grid: { color: 'rgba(138,171,140,0.1)' }
-            }
-          }
-        }
-      });
-    }
-
-    function showError(msg) {
-      const box = document.getElementById('errorBox');
-      box.textContent = '⚠️ ' + msg;
-      box.style.display = 'block';
-    }
-
-    function setLoading(loading) {
-      const btn    = document.getElementById('analyzeBtn');
-      const text   = document.getElementById('btnText');
-      const spinner = document.getElementById('spinner');
-      btn.disabled    = loading;
-      text.style.display   = loading ? 'none' : 'block';
-      spinner.style.display = loading ? 'block' : 'none';
-    }
-
-    // Allow Enter key to trigger analysis
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Enter') runAnalysis();
-    });
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="/static/js/ropias.js"></script>
 </body>
 </html>

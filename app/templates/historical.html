@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROPIAS | Historical Analysis Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/ropias.css">
+</head>
+<body>
+
+<div class="container animate-fade-in py-4">
+    <header class="app-header">
+        <div class="app-brand">
+            <i class="fa-solid fa-clock-rotate-left text-info"></i> 
+            ROPIAS Historical Backtesting
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Back to Main</a>
+        </div>
+    </header>
+
+    <div class="row g-4">
+        <!-- Input Section -->
+        <div class="col-12 col-md-4">
+            <div class="glass-panel h-100">
+                <h5 class="mb-3">Run Simulation</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Latitude</label>
+                    <input type="number" id="hist-lat" class="premium-input" placeholder="0.28" value="0.28">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Longitude</label>
+                    <input type="number" id="hist-lon" class="premium-input" placeholder="34.75" value="34.75">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Target Year</label>
+                    <select class="premium-input" id="hist-year">
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022" selected>2022 (Known False Start)</option>
+                        <option value="2021">2021</option>
+                        <option value="2020">2020</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label text-muted small">Season</label>
+                    <select class="premium-input" id="hist-season">
+                        <option value="long_rains">Long Rains (MAM)</option>
+                        <option value="short_rains">Short Rains (OND)</option>
+                    </select>
+                </div>
+
+                <button class="premium-btn w-100 justify-content-center" onclick="runHistorical()">
+                    <i class="fa-solid fa-play"></i> Run Simulation
+                </button>
+            </div>
+        </div>
+
+        <!-- Output Section -->
+        <div class="col-12 col-md-8">
+            <div id="hist-loading" class="text-center py-5 d-none">
+                <div class="spinner-border text-info" role="status"></div>
+                <p class="mt-3 text-muted">Pulling 90 days of atmospheric data...</p>
+            </div>
+            
+            <div id="hist-results" class="glass-panel h-100 d-none">
+                <h4 class="mb-4 border-bottom border-secondary pb-2" id="hist-title">2022 Long Rains Results</h4>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 border border-secondary rounded" id="hist-onset-box">
+                            <span class="text-muted small">Onset Classification</span>
+                            <h3 id="hist-onset-val" class="mb-0 mt-1">FALSE ONSET</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border border-secondary rounded">
+                            <span class="text-muted small">Total Seasonal Rain</span>
+                            <h3 id="hist-rain-val" class="text-primary mb-0 mt-1">312 mm</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border border-secondary rounded">
+                            <span class="text-muted small">Detected Dry Spells (7+ Days)</span>
+                            <h3 id="hist-dry-val" class="text-warning mb-0 mt-1">3</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border border-secondary rounded">
+                            <span class="text-muted small">Days Below Critical Moisture (Crop Danger)</span>
+                            <h3 id="hist-danger-val" class="text-danger mb-0 mt-1">14</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <p id="hist-summary" class="text-muted mb-0">Review the metrics above to compare system predictions against ground truth crop yields from historical KMD agricultural reports.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function runHistorical() {
+    const lat = document.getElementById('hist-lat').value;
+    const lon = document.getElementById('hist-lon').value;
+    const year = document.getElementById('hist-year').value;
+    const season = document.getElementById('hist-season').value;
+
+    document.getElementById('hist-results').classList.add('d-none');
+    document.getElementById('hist-loading').classList.remove('d-none');
+
+    try {
+        const res = await fetch(`/api/historical?lat=${lat}&lon=${lon}&year=${year}&season=${season}`);
+        const data = await res.json();
+        
+        if (res.ok && data.historical) {
+            const h = data.historical;
+            document.getElementById('hist-title').innerText = `${year} ${season.replace('_', ' ').toUpperCase()} Results`;
+            
+            const onsetBox = document.getElementById('hist-onset-box');
+            document.getElementById('hist-onset-val').innerText = h.onset_result.result;
+            if (h.onset_result.color === 'red') {
+                onsetBox.className = "p-3 border border-danger rounded text-danger bg-danger bg-opacity-10";
+            } else if (h.onset_result.color === 'green') {
+                onsetBox.className = "p-3 border border-success rounded text-success bg-success bg-opacity-10";
+            } else {
+                onsetBox.className = "p-3 border border-secondary rounded text-light";
+            }
+
+            document.getElementById('hist-rain-val').innerText = `${Math.round(h.total_seasonal_rain)} mm`;
+            document.getElementById('hist-dry-val').innerText = h.dry_spell_count;
+            document.getElementById('hist-danger-val').innerText = h.days_below_critical_moisture;
+
+            document.getElementById('hist-loading').classList.add('d-none');
+            document.getElementById('hist-results').classList.remove('d-none');
+        } else {
+            alert(data.error || "Historical run failed.");
+            document.getElementById('hist-loading').classList.add('d-none');
+        }
+    } catch (e) {
+        alert("Network error: " + e.message);
+        document.getElementById('hist-loading').classList.add('d-none');
+    }
+}
+</script>
+</body>
+</html>

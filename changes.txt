@@ -1,0 +1,35 @@
+ROPIAS Project Change Log
+=========================
+Tracking all changes made to fulfill the Full System Design & Functionality Specification.
+
+[x] Created `changes.txt` layout.
+[x] Environment & Dependencies:
+    - [x] Update `requirements.txt` to include `flask-sqlalchemy`, `scikit-learn`, `xgboost`, `africastalking`, etc.
+    - [x] Create `.env` and `.env.example`.
+[x] Database (`database/`):
+    - [x] Created `db.py` (SQLAlchemy models for Queries, Cache, Alerts, History).
+    - [x] Created `schema.sql` for pure SQL tracking.
+[x] Data Fetching (`src/data_fetcher.py`):
+    - [x] Added API caching mechanism.
+    - [x] Configured to fetch `GWETTOP`, `EVPTRNS`, `T2M_MAX`, `T2M_MIN`, `WS2M`, `RH2M` in addition to existing parameters.
+    - [x] Support NASA 7-day forecast endpoint.
+[x] Location Support (`src/location_utils.py`):
+    - [x] Added geopy integration for City-to-Coords resolution.
+[x] Data Science Engines (`src/`):
+    - [x] `onset_engine.py`: Integrated ML models functionality.
+    - [x] `irrigation_engine.py`: Integrated ET-based threshold prediction.
+    - [x] `forecast_engine.py`: Created 7-day planting risk scoring.
+    - [x] `ml_model.py`: Setup training architecture, logistic regression structure.
+    - [x] `historical_engine.py`: Setup to analyze historical validation periods.
+[x] Alerts System (`src/alert_engine.py`):
+    - [x] Integrated `africastalking` wrapper.
+    - [x] Integrated `apscheduler` daily cron job logic.
+[x] Flask Web API (`app/app.py`):
+    - [x] Orchestrated the database context.
+    - [x] Expanded `/analyze` route to include new data.
+    - [x] Added `/api/forecast`, `/api/historical`, `/api/alerts`, `/health`, `/officer`.
+[x] Premium Frontend Redesign (`app/templates/`, `app/static/`):
+    - [x] `index.html`: Completely revamped premium glassmorphism template, GPS detection, Swahili toggle, etc.
+    - [x] `officer.html`: New dashboard for managing multiple farms.
+    - [x] `historical.html`: Historical data analysis dashboard.
+    - [x] `api_docs.html`: Documentation for the API.

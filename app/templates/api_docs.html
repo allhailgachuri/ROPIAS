@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROPIAS | REST API Documentation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/ropias.css">
+</head>
+<body>
+
+<div class="container animate-fade-in py-5">
+    <header class="mb-5 border-bottom border-secondary pb-4">
+        <h2 class="app-brand"><i class="fa-solid fa-code text-primary"></i> ROPIAS REST API</h2>
+        <p class="text-muted">Public programmatic access to the decision intelligence layer for third-party extensions.</p>
+        <a href="/" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Back to Main</a>
+    </header>
+
+    <div class="glass-panel mb-4">
+        <h4><span class="badge bg-success">POST</span> /analyze</h4>
+        <p class="text-muted">Main onset and irrigation classification endpoint. Uses aggressive caching and provides ML confidence scoring.</p>
+        <pre class="bg-dark text-light p-3 rounded"><code>
+// Request
+{
+    "latitude": 0.28,
+    "longitude": 34.75,
+    "city": "Nakuru" // Optional: Overrides lat/lon if provided
+}
+
+// Response
+{
+    "location": { "address": "Nakuru, Kenya", "latitude": -0.28, "longitude": 36.07 },
+    "onset": { "result": "False Onset", "confidence": 0.88 },
+    "irrigation": { "status": "Irrigate Today", "moisture_percent": 22.4 }
+}
+        </code></pre>
+    </div>
+
+    <div class="glass-panel mb-4">
+        <h4><span class="badge bg-success">POST</span> /api/forecast</h4>
+        <p class="text-muted">Provides a 7-day quantitative risk assessment array leveraging forward-looking NASA POWER forecasts.</p>
+    </div>
+
+    <div class="glass-panel mb-4">
+        <h4><span class="badge bg-primary">GET</span> /api/historical</h4>
+        <p class="text-muted">Simulates the pipeline over historical dates for validation studies.</p>
+        <p><code>?lat=0.28&lon=34.75&year=2022&season=long_rains</code></p>
+    </div>
+</div>
+
+</body>
+</html>

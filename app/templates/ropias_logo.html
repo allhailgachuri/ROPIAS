@@ -1,0 +1,336 @@
+
+<style>
+  :root {
+    --logo-green-1: #2D6A35;
+    --logo-green-2: #4A9B54;
+    --logo-green-3: #7CC E85;
+    --logo-blue-1: #1B5E8C;
+    --logo-blue-2: #3A8FC4;
+    --logo-blue-3: #7BBFE0;
+    --logo-gold: #C8922A;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --logo-green-1: #5BBD68;
+      --logo-green-2: #7ED48A;
+      --logo-green-3: #A8E8B0;
+      --logo-blue-1: #5EB0E8;
+      --logo-blue-2: #8CCFF5;
+      --logo-blue-3: #B8E5FA;
+      --logo-gold: #E8B84B;
+    }
+  }
+
+  .logo-wrap {
+    padding: 2.5rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+  }
+
+  .logo-variant {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .variant-label {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .logo-lockup {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .logo-lockup:hover { transform: scale(1.02); }
+
+  .logo-text-group {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .logo-wordmark {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 28px;
+    color: var(--color-text-primary);
+    letter-spacing: 0.15em;
+  }
+
+  .logo-tagline {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .divider {
+    width: 100%;
+    max-width: 560px;
+    height: 1px;
+    background: var(--color-border-tertiary);
+  }
+
+  .icon-grid {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .icon-variant {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .icon-bg-dark {
+    background: #0D1F0F;
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon-bg-light {
+    background: #F4FAF4;
+    border-radius: 16px;
+    padding: 12px;
+    border: 1px solid #D0E8D2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
+<div class="logo-wrap">
+
+  <!-- PRIMARY FULL LOGO -->
+  <div class="logo-variant">
+    <span class="variant-label">Primary — Full lockup</span>
+    <div class="logo-lockup" onclick="sendPrompt('Show me the ROPIAS logo on a dark background')">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+        <!-- Outer rain arc -->
+        <path d="M8 28 A20 20 0 0 1 48 28" stroke="var(--logo-blue-2)" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <!-- Rain drops falling from arc -->
+        <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+        <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+        <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.9"/>
+        <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+        <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+        <!-- Soil ground line -->
+        <path d="M6 46 Q28 41 50 46" stroke="var(--logo-green-1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <!-- Sprouting seedling -->
+        <path d="M28 46 L28 32" stroke="var(--logo-green-2)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Left leaf -->
+        <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="var(--logo-green-2)"/>
+        <!-- Right leaf -->
+        <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="var(--logo-green-1)"/>
+        <!-- True onset dot — the green signal -->
+        <circle cx="28" cy="14" r="4" fill="var(--logo-green-2)"/>
+        <circle cx="28" cy="14" r="2" fill="var(--logo-green-3)"/>
+      </svg>
+
+      <div class="logo-text-group">
+        <span class="logo-wordmark">ROPIAS</span>
+        <span class="logo-tagline">Rainfall Onset Prediction & Irrigation Advisory</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- COMPACT HORIZONTAL -->
+  <div class="logo-variant">
+    <span class="variant-label">Compact — horizontal</span>
+    <div class="logo-lockup">
+      <svg width="36" height="36" viewBox="0 0 56 56" fill="none">
+        <path d="M8 28 A20 20 0 0 1 48 28" stroke="var(--logo-blue-2)" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+        <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+        <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.9"/>
+        <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+        <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+        <path d="M6 46 Q28 41 50 46" stroke="var(--logo-green-1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M28 46 L28 32" stroke="var(--logo-green-2)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="var(--logo-green-2)"/>
+        <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="var(--logo-green-1)"/>
+        <circle cx="28" cy="14" r="4" fill="var(--logo-green-2)"/>
+        <circle cx="28" cy="14" r="2" fill="var(--logo-green-3)"/>
+      </svg>
+      <span style="font-family: var(--font-sans); font-weight: 500; font-size: 20px; color: var(--color-text-primary); letter-spacing: 0.12em;">ROPIAS</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ICON ONLY — multiple sizes + forced themes -->
+  <div class="logo-variant">
+    <span class="variant-label">Icon mark — sizes & forced themes</span>
+    <div class="icon-grid">
+
+      <!-- Large -->
+      <div class="icon-variant">
+        <svg width="72" height="72" viewBox="0 0 56 56" fill="none">
+          <path d="M8 28 A20 20 0 0 1 48 28" stroke="var(--logo-blue-2)" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+          <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+          <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.9"/>
+          <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+          <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+          <path d="M6 46 Q28 41 50 46" stroke="var(--logo-green-1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M28 46 L28 32" stroke="var(--logo-green-2)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="var(--logo-green-2)"/>
+          <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="var(--logo-green-1)"/>
+          <circle cx="28" cy="14" r="4" fill="var(--logo-green-2)"/>
+          <circle cx="28" cy="14" r="2" fill="var(--logo-green-3)"/>
+        </svg>
+        <span class="variant-label">72px</span>
+      </div>
+
+      <!-- Medium -->
+      <div class="icon-variant">
+        <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
+          <path d="M8 28 A20 20 0 0 1 48 28" stroke="var(--logo-blue-2)" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+          <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+          <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.9"/>
+          <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+          <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+          <path d="M6 46 Q28 41 50 46" stroke="var(--logo-green-1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M28 46 L28 32" stroke="var(--logo-green-2)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="var(--logo-green-2)"/>
+          <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="var(--logo-green-1)"/>
+          <circle cx="28" cy="14" r="4" fill="var(--logo-green-2)"/>
+          <circle cx="28" cy="14" r="2" fill="var(--logo-green-3)"/>
+        </svg>
+        <span class="variant-label">48px</span>
+      </div>
+
+      <!-- Small -->
+      <div class="icon-variant">
+        <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+          <path d="M8 28 A20 20 0 0 1 48 28" stroke="var(--logo-blue-2)" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+          <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+          <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.9"/>
+          <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.7"/>
+          <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="var(--logo-blue-2)" opacity="0.5"/>
+          <path d="M6 46 Q28 41 50 46" stroke="var(--logo-green-1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M28 46 L28 32" stroke="var(--logo-green-2)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="var(--logo-green-2)"/>
+          <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="var(--logo-green-1)"/>
+          <circle cx="28" cy="14" r="4" fill="var(--logo-green-2)"/>
+          <circle cx="28" cy="14" r="2" fill="var(--logo-green-3)"/>
+        </svg>
+        <span class="variant-label">28px</span>
+      </div>
+
+      <!-- Forced dark bg -->
+      <div class="icon-variant">
+        <div class="icon-bg-dark">
+          <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
+            <path d="M8 28 A20 20 0 0 1 48 28" stroke="#7BBFE0" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="#7BBFE0" opacity="0.5"/>
+            <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="#7BBFE0" opacity="0.7"/>
+            <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="#7BBFE0" opacity="0.9"/>
+            <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="#7BBFE0" opacity="0.7"/>
+            <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="#7BBFE0" opacity="0.5"/>
+            <path d="M6 46 Q28 41 50 46" stroke="#5BBD68" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M28 46 L28 32" stroke="#7ED48A" stroke-width="2" stroke-linecap="round"/>
+            <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="#7ED48A"/>
+            <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="#5BBD68"/>
+            <circle cx="28" cy="14" r="4" fill="#7ED48A"/>
+            <circle cx="28" cy="14" r="2" fill="#A8E8B0"/>
+          </svg>
+        </div>
+        <span class="variant-label">On dark</span>
+      </div>
+
+      <!-- Forced light bg -->
+      <div class="icon-variant">
+        <div class="icon-bg-light">
+          <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
+            <path d="M8 28 A20 20 0 0 1 48 28" stroke="#1B5E8C" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <ellipse cx="14" cy="34" rx="2" ry="3.2" fill="#1B5E8C" opacity="0.5"/>
+            <ellipse cx="22" cy="38" rx="2" ry="3.2" fill="#1B5E8C" opacity="0.7"/>
+            <ellipse cx="30" cy="40" rx="2" ry="3.2" fill="#1B5E8C" opacity="0.9"/>
+            <ellipse cx="38" cy="38" rx="2" ry="3.2" fill="#1B5E8C" opacity="0.7"/>
+            <ellipse cx="46" cy="34" rx="2" ry="3.2" fill="#1B5E8C" opacity="0.5"/>
+            <path d="M6 46 Q28 41 50 46" stroke="#2D6A35" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M28 46 L28 32" stroke="#4A9B54" stroke-width="2" stroke-linecap="round"/>
+            <path d="M28 36 Q20 30 18 25 Q24 28 28 36Z" fill="#4A9B54"/>
+            <path d="M28 38 Q36 32 38 27 Q32 30 28 38Z" fill="#2D6A35"/>
+            <circle cx="28" cy="14" r="4" fill="#4A9B54"/>
+            <circle cx="28" cy="14" r="2" fill="#7ECE85"/>
+          </svg>
+        </div>
+        <span class="variant-label">On light</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- FAVICON / APP ICON -->
+  <div class="logo-variant">
+    <span class="variant-label">Favicon & app icon</span>
+    <div class="icon-grid">
+      <div class="icon-variant">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="border-radius:7px; background:#0D1F0F">
+          <path d="M4 16 A12 12 0 0 1 28 16" stroke="#7BBFE0" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <ellipse cx="7"  cy="20" rx="1.3" ry="2" fill="#7BBFE0" opacity="0.5"/>
+          <ellipse cx="12" cy="23" rx="1.3" ry="2" fill="#7BBFE0" opacity="0.75"/>
+          <ellipse cx="17" cy="24" rx="1.3" ry="2" fill="#7BBFE0"/>
+          <ellipse cx="22" cy="23" rx="1.3" ry="2" fill="#7BBFE0" opacity="0.75"/>
+          <ellipse cx="27" cy="20" rx="1.3" ry="2" fill="#7BBFE0" opacity="0.5"/>
+          <path d="M3 27 Q16 23 29 27" stroke="#5BBD68" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M16 27 L16 19" stroke="#7ED48A" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M16 21 Q11 18 10 14 Q14 16 16 21Z" fill="#7ED48A"/>
+          <path d="M16 22 Q21 19 22 15 Q18 17 16 22Z" fill="#5BBD68"/>
+          <circle cx="16" cy="8" r="2.8" fill="#7ED48A"/>
+          <circle cx="16" cy="8" r="1.5" fill="#A8E8B0"/>
+        </svg>
+        <span class="variant-label">32px favicon</span>
+      </div>
+
+      <div class="icon-variant">
+        <svg width="60" height="60" viewBox="0 0 60 60" fill="none" style="border-radius:14px; background:#0D1F0F">
+          <path d="M7 30 A23 23 0 0 1 53 30" stroke="#7BBFE0" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <ellipse cx="11" cy="37" rx="2" ry="3" fill="#7BBFE0" opacity="0.5"/>
+          <ellipse cx="20" cy="42" rx="2" ry="3" fill="#7BBFE0" opacity="0.75"/>
+          <ellipse cx="30" cy="44" rx="2" ry="3" fill="#7BBFE0"/>
+          <ellipse cx="40" cy="42" rx="2" ry="3" fill="#7BBFE0" opacity="0.75"/>
+          <ellipse cx="49" cy="37" rx="2" ry="3" fill="#7BBFE0" opacity="0.5"/>
+          <path d="M5 51 Q30 45 55 51" stroke="#5BBD68" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M30 51 L30 36" stroke="#7ED48A" stroke-width="2" stroke-linecap="round"/>
+          <path d="M30 41 Q21 34 19 27 Q25 31 30 41Z" fill="#7ED48A"/>
+          <path d="M30 43 Q39 36 41 29 Q35 33 30 43Z" fill="#5BBD68"/>
+          <circle cx="30" cy="14" r="5" fill="#7ED48A"/>
+          <circle cx="30" cy="14" r="2.5" fill="#A8E8B0"/>
+        </svg>
+        <span class="variant-label">60px app icon</span>
+      </div>
+    </div>
+  </div>
+
+</div>

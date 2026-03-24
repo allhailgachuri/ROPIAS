@@ -3,134 +3,206 @@ app.py
 =======
 Flask web application for ROPIAS.
 Serves the farmer dashboard and orchestrates the full data pipeline.
-
-Run with:
-    python app.py
-
-Then open: http://localhost:5000
-
-Author: ROPIAS Project
 """
 
 import sys
 import os
 
-# ── Path setup ────────────────────────────────────────────────────────────────
+# Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from flask import Flask, render_template, request, jsonify
-from data_fetcher import fetch_climate_data, validate_kenya_coordinates
-from onset_engine import classify_onset, OnsetResult
-from irrigation_engine import classify_soil_moisture, IrrigationStatus
+from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from src.data_fetcher import fetch_climate_data, validate_kenya_coordinates
+from src.onset_engine import classify_onset
+from src.irrigation_engine import classify_soil_moisture
+from src.location_utils import get_coordinates_from_city
+from src.forecast_engine import compute_planting_risk_score
+from src.historical_engine import analyze_historical_season
+
+# DB and Alerts
+from database.db import db, AlertSubscription, Query, ApiCache, HistoricalOnset
+from src.alert_engine import start_scheduler
 
 app = Flask(__name__)
+CORS(app)
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f"sqlite:///{os.path.join(basedir, '..', 'database', 'ropias.db')}")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+    # Start scheduler only if not running in a reloader thread to avoid duplicates
+    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        start_scheduler(app)
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
+# ── Frontend Routes ───────────────────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def index():
-    """Renders the main farmer dashboard."""
     return render_template("index.html")
 
+@app.route("/officer", methods=["GET"])
+def officer():
+    return render_template("officer.html")
 
+@app.route("/historical", methods=["GET"])
+def historical():
+    return render_template("historical.html")
+
+@app.route("/api/docs", methods=["GET"])
+def api_docs():
+    return render_template("api_docs.html")
+
+
+# ── API Routes ────────────────────────────────────────────────────────────────
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    """
-    Main analysis endpoint.
+    body = request.get_json()
+    
+    # Check if city or coords provided
+    city = body.get("city")
+    if city:
+        lat, lon, address = get_coordinates_from_city(city)
+        if lat is None:
+            return jsonify({"error": "City not found. Please try entering precise coordinates."}), 400
+    else:
+        try:
+            lat = float(body.get("latitude"))
+            lon = float(body.get("longitude"))
+            address = f"{lat}, {lon}"
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid coordinates."}), 400
 
-    Accepts JSON: { "latitude": float, "longitude": float }
-    Returns JSON with onset classification, irrigation advisory,
-    and chart data.
-    """
-    # ── Parse input ───────────────────────────────────────────────────────────
-    try:
-        body = request.get_json()
-        lat = float(body.get("latitude"))
-        lon = float(body.get("longitude"))
-    except (TypeError, ValueError):
-        return jsonify({
-            "error": "Invalid coordinates. Please enter valid decimal numbers."
-        }), 400
-
-    # ── Validate coordinates ──────────────────────────────────────────────────
     if not validate_kenya_coordinates(lat, lon):
-        return jsonify({
-            "error": (
-                "Coordinates are outside Kenya's bounds. "
-                "Latitude must be between -5 and 5. "
-                "Longitude must be between 34 and 42."
-            )
-        }), 400
+        return jsonify({"error": "Coordinates are outside Kenya bounds."}), 400
 
-    # ── Fetch NASA data ───────────────────────────────────────────────────────
     try:
-        climate = fetch_climate_data(
-            latitude=lat,
-            longitude=lon,
-            days_back=60
-        )
+        # Fetch data up to today
+        climate = fetch_climate_data(latitude=lat, longitude=lon, days_back=60, include_forecast=False)
+        # Fetch forecast explicitly for next 7 days
+        forecast = fetch_climate_data(latitude=lat, longitude=lon, days_back=0, include_forecast=True)
     except ConnectionError as e:
         return jsonify({"error": str(e)}), 503
-    except ValueError as e:
+    except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-    rain = climate["precipitation"]
-    soil = climate["soil_moisture"]
+    # Extract 7-day forecast arrays
+    rain_forecast = forecast["precipitation"].tail(7).values.tolist() if len(forecast["precipitation"]) >= 7 else []
 
-    # ── Run engines ───────────────────────────────────────────────────────────
-    onset      = classify_onset(rain)
-    irrigation = classify_soil_moisture(soil)
+    onset = classify_onset(climate)
+    irrigation = classify_soil_moisture(climate, rain_forecast)
 
-    # ── Prepare chart data (last 14 days) ─────────────────────────────────────
-    rain_14      = rain.tail(14)
-    chart_labels = [d.strftime("%b %d") for d in rain_14.index]
-    chart_values = [round(float(v), 2) for v in rain_14.values]
+    # Save Query to DB
+    try:
+        new_query = Query(
+            latitude=lat, longitude=lon,
+            onset_result=onset.get("result", "None"),
+            onset_color=onset.get("color", "grey"),
+            moisture_pct=irrigation.get("moisture_percent", 0.0),
+            irrigation_status=irrigation.get("status", "Unknown"),
+            data_start=climate["start_date"],
+            data_end=climate["end_date"]
+        )
+        db.session.add(new_query)
+        db.session.commit()
+    except Exception as e:
+        print("Failed to save query to DB:", e)
+        db.session.rollback()
 
-    # Soil moisture history for trend line (last 14 days)
-    soil_14       = soil.tail(14)
-    soil_values   = [
-        round(float(v) * 100, 1) if not str(v) == 'nan' else None
-        for v in soil_14.values
-    ]
-
-    # ── Build response ────────────────────────────────────────────────────────
+    # Chart prep
+    rain_14 = climate["precipitation"].tail(14)
+    soil_14 = climate["soil_moisture"].tail(14)
+    
     return jsonify({
-        "onset": {
-            "result":         onset["result"].value,
-            "color":          onset["color"],
-            "onset_date":     onset["onset_date"],
-            "cumulative_rain": onset["cumulative_rain"],
-            "summary":        onset["summary"]
-        },
-        "irrigation": {
-            "status":             irrigation["status"].value,
-            "moisture_percent":   irrigation["moisture_percent"],
-            "moisture_category":  irrigation["moisture_category"],
-            "trend":              irrigation["trend"],
-            "color":              irrigation["color"],
-            "summary":            irrigation["summary"],
-            "gauge_data":         irrigation["gauge_data"]
-        },
+        "location": {"latitude": lat, "longitude": lon, "address": address},
+        "onset": onset,
+        "irrigation": irrigation,
         "chart": {
-            "labels":         chart_labels,
-            "rainfall":       chart_values,
-            "soil_moisture":  soil_values
-        },
-        "meta": {
-            "latitude":   lat,
-            "longitude":  lon,
-            "start_date": climate["start_date"],
-            "end_date":   climate["end_date"]
+            "labels": [d.strftime("%b %d") for d in rain_14.index],
+            "rainfall": [round(float(v), 2) for v in rain_14.values],
+            "soil_moisture": [round(float(v)*100, 1) if str(v) != 'nan' else None for v in soil_14.values]
         }
     })
 
 
+@app.route("/api/forecast", methods=["POST"])
+def api_forecast():
+    body = request.get_json()
+    lat = float(body.get("latitude"))
+    lon = float(body.get("longitude"))
+    
+    climate = fetch_climate_data(lat, lon, days_back=5, include_forecast=True)
+    f_rain = climate["precipitation"].tail(7).values.tolist()
+    f_et = climate["evapotranspiration"].tail(7).values.tolist()
+    
+    soil_series = climate["soil_moisture"].dropna()
+    c_soil = float(soil_series.iloc[-1]) if len(soil_series) > 0 else 0.3
+    
+    risk = compute_planting_risk_score(f_rain, f_et, c_soil)
+    return jsonify({"forecast_risk": risk})
+
+
+@app.route("/api/historical", methods=["GET"])
+def api_historical():
+    lat = float(request.args.get("lat"))
+    lon = float(request.args.get("lon"))
+    year = int(request.args.get("year"))
+    season = request.args.get("season", "long_rains")
+    
+    res = analyze_historical_season(lat, lon, year, season)
+    return jsonify({"historical": res})
+
+
+@app.route("/api/alerts/subscribe", methods=["POST"])
+def subscribe_alert():
+    body = request.get_json()
+    phone = body.get("phone")
+    lat = float(body.get("latitude"))
+    lon = float(body.get("longitude"))
+    
+    # Ensure standard international format
+    if not phone.startswith('+'):
+        phone = '+' + phone
+        
+    sub = AlertSubscription.query.filter_by(phone=phone).first()
+    if sub:
+        sub.latitude = lat
+        sub.longitude = lon
+        sub.active = True
+    else:
+        sub = AlertSubscription(phone=phone, latitude=lat, longitude=lon)
+        db.session.add(sub)
+    db.session.commit()
+    return jsonify({"status": "success", "message": f"Subscribed {phone} successfully."})
+
+
+@app.route("/api/alerts/unsubscribe", methods=["DELETE"])
+def unsubscribe_alert():
+    body = request.get_json()
+    phone = body.get("phone")
+    if not phone.startswith('+'): phone = '+' + phone
+        
+    sub = AlertSubscription.query.filter_by(phone=phone).first()
+    if sub:
+        sub.active = False
+        db.session.commit()
+        return jsonify({"status": "unsubscribed"})
+    return jsonify({"error": "Not registered."}), 404
+
+
 @app.route("/health", methods=["GET"])
 def health():
-    """Health check endpoint for deployment monitoring."""
-    return jsonify({"status": "ok", "service": "ROPIAS"}), 200
+    return jsonify({"status": "ok", "service": "ROPIAS ML Edition"}), 200
 
-
-# ── Run ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
