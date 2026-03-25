@@ -10,6 +10,7 @@ from flask import (
 )
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime
+import re
 from database.models import db, User
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -53,6 +54,88 @@ def login():
             flash("Incorrect email or password. Please try again.", "danger")
 
     return render_template("auth/login.html")
+
+
+def is_strong_password(password: str) -> bool:
+    """
+    Strict password policy:
+    - At least 8 characters long
+    - Contains at least 1 uppercase letter
+    - Contains at least 1 lowercase letter
+    - Contains at least 1 number
+    - Contains at least 1 special character
+    """
+    if len(password) < 8: return False
+    if not re.search(r"[A-Z]", password): return False
+    if not re.search(r"[a-z]", password): return False
+    if not re.search(r"\d", password): return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password): return False
+    return True
+
+
+@auth_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    """Manual Farmer Registration with strict password constraints."""
+    if current_user.is_authenticated:
+        return _redirect_by_role(current_user)
+
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        
+        # Validation
+        if User.query.filter_by(email=email).first():
+            flash("An account with that email already exists.", "warning")
+            return redirect(url_for("auth.signup"))
+            
+        if not is_strong_password(password):
+            flash("Password must be 8+ chars and contain uppercase, lowercase, number, and special character.", "danger")
+            return redirect(url_for("auth.signup"))
+            
+        # username generation
+        base_username = email.split("@")[0]
+        username = base_username
+        suffix = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{suffix}"
+            suffix += 1
+
+        # Calculate initials securely
+        initials = "".join([n[0].upper() for n in full_name.split()[:2]]) if full_name else "FR"
+
+        # Create Farmer
+        new_user = User(
+            full_name=full_name,
+            username=username,
+            email=email,
+            phone=phone,
+            role="farmer",
+            avatar_initials=initials,
+            greeting=f"Habari {full_name.split()[0]}! Welcome to your ROPIAS dashboard."
+        )
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        # Auto-login
+        login_user(new_user)
+        flash("Registration successful! Welcome to ROPIAS.", "success")
+        return redirect(url_for("farmer.dashboard"))
+
+    return render_template("auth/signup.html")
+
+
+@auth_bp.route("/login/google")
+def login_google():
+    """
+    Initiates Google OAuth flow. 
+    (Requires client integration via Authlib or OAuth2. 
+    Placeholder pending GOOGLE_CLIENT_ID configuration validation).
+    """
+    flash("Google Sign-In integration requires active Google Developer credentials. Please use manual sign up for now.", "info")
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/logout")
