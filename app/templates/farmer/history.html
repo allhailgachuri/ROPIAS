@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-5 py-4" style="max-width: 1400px; margin: 0 auto;">
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <h4 class="font-body fw-bold m-0 d-flex align-items-center gap-2" style="color: var(--text-primary);">
+            <i data-lucide="bar-chart-2" class="w-6 h-6 text-[var(--teal)]"></i> My Advisory History
+        </h4>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn border font-body text-sm" style="background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border)!important;">All Crops <i data-lucide="chevron-down" class="w-4 h-4 ms-2"></i></button>
+            <button class="btn border font-body text-sm" style="background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border)!important;">Last 30 Days <i data-lucide="chevron-down" class="w-4 h-4 ms-2"></i></button>
+        </div>
+    </div>
+
+    <div class="ropias-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table mb-0" style="color: var(--text-secondary);">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border);">
+                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Date</th>
+                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Crop</th>
+                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Onset Result</th>
+                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Soil</th>
+                        <th class="font-body fw-bold py-3 px-4 d-none d-md-table-cell" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Action taken</th>
+                    </tr>
+                </thead>
+                <tbody style="border-top: none;">
+                    {% if logs %}
+                        {% for log in logs %}
+                        <tr style="border-bottom: 1px solid var(--border); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='var(--bg-subtle)'" onmouseout="this.style.backgroundColor='transparent'">
+                            <td class="font-mono py-4 px-4 align-middle" style="font-size: 13px;">{{ log.created_at.strftime('%b %d, %Y') }}</td>
+                            <td class="font-body py-4 px-4 align-middle text-capitalize" style="font-size: 14px;">{{ log.crop_key }}</td>
+                            <td class="align-middle px-4">
+                                {% if log.onset_result == "TRUE_ONSET" %}
+                                    <span class="badge rounded-pill d-inline-flex gap-1 align-items-center" style="background-color: var(--green-light); color: var(--green-safe); font-size: 12px; padding: 6px 10px; font-weight: 500;">
+                                        <i data-lucide="check-circle" class="w-3 h-3"></i> True Onset
+                                    </span>
+                                {% elif log.onset_result == "FALSE_ONSET" %}
+                                    <span class="badge rounded-pill d-inline-flex gap-1 align-items-center" style="background-color: var(--red-light); color: var(--red-danger); font-size: 12px; padding: 6px 10px; font-weight: 500;">
+                                        <i data-lucide="alert-triangle" class="w-3 h-3"></i> False Onset
+                                    </span>
+                                {% else %}
+                                    <span class="badge rounded-pill d-inline-flex gap-1 align-items-center" style="background-color: var(--bg-subtle); color: var(--text-secondary); font-size: 12px; padding: 6px 10px; font-weight: 500;">
+                                        <i data-lucide="clock" class="w-3 h-3"></i> None
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="font-mono py-4 px-4 align-middle fw-bold" style="font-size: 13px; color: {% if log.moisture_pct < 30 %}var(--red-danger){% elif log.moisture_pct > 70 %}var(--blue-water){% else %}var(--green-safe){% endif %};">
+                                {{ "%.1f"|format(log.moisture_pct) }}%
+                            </td>
+                            <td class="py-4 px-4 align-middle d-none d-md-table-cell">
+                                <span class="badge" style="background-color: var(--bg-input); color: var(--text-primary); font-weight: 400; letter-spacing: 0.5px;">Pending Field Data</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i data-lucide="database" class="w-8 h-8 mx-auto mb-3" style="color: var(--text-muted);"></i>
+                                <p class="font-body m-0" style="color: var(--text-secondary);">No advisories processed yet. Run your first analysis on the dashboard.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

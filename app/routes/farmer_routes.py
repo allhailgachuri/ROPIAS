@@ -70,3 +70,13 @@ def history():
         .all()
     )
     return render_template("farmer/history.html", logs=logs, user=current_user)
+
+
+@farmer_bp.route("/crops")
+@login_required
+@farmer_required
+def crops():
+    """Reference library for all Kenya crops."""
+    crops_by_category = get_crops_by_category()
+    return render_template("farmer/crops.html", crops_by_category=crops_by_category, user=current_user)
+
