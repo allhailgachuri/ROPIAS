@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROPIAS | Login</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ropias.css') }}">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            background-color: #F5EFEB; /* beige */
+        }
+        .login-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        .login-brand-panel {
+            background-color: #2F4156; /* navy */
+            color: white;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+        }
+        .login-brand-panel h1 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            font-size: 3rem;
+            margin-top: 1.5rem;
+            letter-spacing: -0.5px;
+        }
+        .login-brand-panel p {
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 1.25rem;
+            color: #C8D9E6; /* sky */
+            max-width: 400px;
+            margin-top: 1rem;
+        }
+        .login-form-panel {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            background-color: #F5EFEB; /* beige */
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08); /* subtle shadow */
+        }
+        .login-card .icon-top {
+            display: none; /* hidden on desktop, block on mobile */
+        }
+        .login-input {
+            background-color: #C8D9E6 !important; /* sky */
+            border: 2px solid transparent;
+            color: #2F4156;
+            font-weight: 500;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .login-input:focus {
+            background-color: #fff !important;
+            border-color: #2F4156; /* navy */
+            box-shadow: 0 0 0 0.2rem rgba(47, 65, 86, 0.25);
+        }
+        .login-btn {
+            background-color: #2F4156; /* navy */
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            font-weight: 600;
+            border-radius: 8px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        .login-btn:hover {
+            background-color: #567C8D; /* teal */
+            color: white;
+        }
+        .form-label {
+            color: #2F4156;
+            font-weight: 600;
+        }
+        /* Mobile handling */
+        @media (max-width: 768px) {
+            .login-wrapper {
+                flex-direction: column;
+            }
+            .login-brand-panel {
+                flex: none;
+                padding: 1.5rem;
+                height: auto;
+            }
+            .login-brand-panel h1 {
+                font-size: 2rem;
+                margin-top: 0.5rem;
+            }
+            .login-brand-panel p {
+                font-size: 1rem;
+                margin-top: 0.5rem;
+                margin-bottom: 0;
+            }
+            .login-card {
+                padding: 2rem;
+                box-shadow: none;
+            }
+        }
+        
+        .alert-flash {
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+        }
+        .alert-flash.alert-danger {
+            background-color: #F8D7DA;
+            color: #842029;
+            border-left: 4px solid #842029;
+        }
+        .alert-flash.alert-success {
+            background-color: #D1E7DD;
+            color: #0F5132;
+            border-left: 4px solid #567C8D;
+        }
+        .alert-flash.alert-info {
+            background-color: #CFE2FF;
+            color: #084298;
+            border-left: 4px solid #2F4156;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-wrapper">
+    <!-- Brand Panel (Left) -->
+    <div class="login-brand-panel shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="white" class="bi bi-cloud-rain-fill" viewBox="0 0 16 16">
+            <path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/>
+        </svg>
+        <h1>ROPIAS</h1>
+        <p>Protecting Kenya's harvests with satellite intelligence</p>
+    </div>
+
+    <!-- Form Panel (Right) -->
+    <div class="login-form-panel">
+        <div class="login-card">
+            
+            <div class="text-center mb-4">
+                <h3 style="font-family: 'Playfair Display', serif; color: #2F4156; font-weight: 600;">Welcome Back</h3>
+                <p class="text-muted small">Please sign in to access your dashboard</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} alert-flash alert-dismissible fade show mb-4 pb-2 pt-2" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close pb-2 pt-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('auth.login') }}">
+                <div class="mb-4">
+                    <label for="identifier" class="form-label" style="font-size: 0.9rem;">Login with email or username</label>
+                    <input type="text" class="form-control login-input" id="identifier" name="identifier" required placeholder="name@example.com">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="password" class="form-label" style="font-size: 0.9rem;">Password</label>
+                    <input type="password" class="form-control login-input" id="password" name="password" required placeholder="********">
+                </div>
+                
+                <div class="mb-4 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label text-muted" for="remember">Remember me on this device</label>
+                </div>
+                
+                <button type="submit" class="btn login-btn">Sign In</button>
+            </form>
+
+            <div class="text-center mt-4">
+                <p class="text-muted small mb-0">Don't have an account?</p>
+                <p class="text-muted small">Contact your extension officer to register your farm.</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -27,6 +27,28 @@
             </button>
         </div>
     </header>
+
+    <!-- Greeting banner — personalised per user -->
+    <div class="greeting-banner mb-4 d-flex justify-content-between align-items-center p-4 shadow-sm rounded-4" style="background: white; border-left: 4px solid #567C8D;">
+        <div class="d-flex align-items-center gap-4">
+          <div class="greeting-avatar d-flex align-items-center justify-content-center text-white rounded-circle shadow-sm" style="background:#2F4156; width:60px; height:60px; font-size:1.5rem; font-weight:600;">
+              {{ current_user.avatar_initials }}
+          </div>
+          <div class="greeting-text">
+            <h2 style="font-family: 'Playfair Display', serif; color: #2F4156; font-size: 1.6rem; margin-bottom: 0.2rem;">{{ current_user.greeting }}</h2>
+            <p class="greeting-sub mb-0 text-muted" style="font-family: 'Source Sans 3', sans-serif;">
+                <i class="bi bi-tag-fill me-1" style="color: #567C8D;"></i> <strong>{{ current_user.preferred_crop | title }}</strong> advisory · Last updated {{ now.strftime('%B %d, %Y at %I:%M %p') }}
+            </p>
+          </div>
+        </div>
+        <div class="greeting-time d-none d-md-block">
+          <span class="time-badge bg-light text-muted px-4 py-2 rounded-pill shadow-sm blur-bg" style="font-family: 'Source Sans 3', sans-serif; font-weight: 500; font-size: 0.9rem;">
+              <i class="bi bi-calendar3 me-2" style="font-style: normal;">📅 </i>{{ now.strftime('%a, %b %d') }}
+          </span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
     <hr class="mb-4" style="border-top: 2px solid var(--teal); opacity: 0.2;">
 
     <div class="row g-4 mb-4">
