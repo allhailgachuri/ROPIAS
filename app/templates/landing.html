@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROPIAS | Rainfall Onset Prediction & Irrigation Advisory System</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              safe: '#2E7D52', خطر: '#C0392B', watch: '#B7791F'
+            },
+            fontFamily: {
+              serif: ['"DM Serif Display"', 'Georgia', 'serif'],
+              sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace']
+            }
+          }
+        }
+      }
+    </script>
+    
+    <style>
+        /* Base ROPIAS CSS Variables */
+        :root {
+            --green-safe: #2E7D52;
+            --red-danger: #C0392B;
+            --amber-watch: #B7791F;
+        }
+
+        /* Light Theme */
+        [data-theme="light"] {
+            --bg-page: #F5EFEB;
+            --bg-card: #FFFFFF;
+            --bg-input: #C8D9E6;
+            --text-primary: #2F4156;
+            --text-secondary: #567C8D;
+            --text-muted: #7A91A0;
+            --border: #C8D9E6;
+            --accent: #567C8D;
+            --hero-gradient: linear-gradient(to top, var(--bg-page) 0%, rgba(47,65,86,0.3) 100%);
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --bg-page: #1A2530;
+            --bg-card: #243040;
+            --bg-input: #2D3E4E;
+            --text-primary: #E8F0F5;
+            --text-secondary: #8BAFC0;
+            --text-muted: #5A7A8A;
+            --border: #3A5060;
+            --accent: #7AAFC2;
+            --hero-gradient: linear-gradient(to top, var(--bg-page) 0%, rgba(15,22,30,0.8) 100%);
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            transition: background-color 0.4s ease, color 0.4s ease;
+            overflow-x: hidden;
+        }
+
+        /* Mandatory Noise Overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10000;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            background-color: rgba(var(--bg-card), 0.85); /* fallback */
+        }
+        [data-theme="light"] .theme-toggle { background: rgba(255,255,255,0.85); box-shadow: 0 4px 20px rgba(47,65,86,0.12); color: #2F4156; }
+        [data-theme="dark"] .theme-toggle { background: rgba(36,48,64,0.85); box-shadow: 0 4px 20px rgba(0,0,0,0.3); color: #C8D9E6; }
+        .theme-toggle:hover { transform: scale(1.03) translateY(-1px); }
+
+        /* General Utilities */
+        .ropias-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-pill {
+            background: transparent;
+            border-radius: 999px;
+            transition: all 0.4s ease;
+            border: 1px solid transparent;
+        }
+        
+        .glass-nav-scrolled {
+            background-color: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-color: var(--border);
+            box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+        }
+
+        .btn-navy { background-color: #2F4156; color: white; transition: all 0.3s; }
+        .btn-navy:hover { transform: scale(1.03); background-color: #1a2530; }
+        .btn-ghost { border: 1px solid currentColor; transition: all 0.3s; }
+        .btn-ghost:hover { transform: scale(1.03); opacity: 0.8; }
+
+        /* Hardware Acceleration */
+        .hwa { will-change: transform, opacity; }
+
+        /* Data Pill Animation */
+        @keyframes subtleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .floating-pill { animation: subtleFloat 4s ease-in-out infinite; }
+
+        /* Trust Strip Marquee */
+        .trust-marquee { display: flex; white-space: nowrap; animation: scrollLeft 30s linear infinite; }
+        @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* Typewriter Cursor */
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Word Reveal */
+        .word-reveal span { display: inline-block; opacity: 0; transform: translateY(15px); }
+
+        /* Sticky How It Works Cards */
+        .sticky-card-container { height: 300vh; position: relative; } /* 3 cards */
+        .sticky-card {
+            position: absolute; top:0; left:0; width:100%; height:100vh;
+            display:flex; align-items:center; justify-content:center;
+        }
+        
+        .pulse-dot {
+            width: 8px; height: 8px; background-color: var(--green-safe); border-radius: 50%;
+            display: inline-block; box-shadow: 0 0 0 0 rgba(46,125,82, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46,125,82, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(46,125,82, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46,125,82, 0); }
+        }
+
+    </style>
+
+    <!-- Pre-load Theme Logic -->
+    <script>
+        (function() {
+            const saved = localStorage.getItem('ropias-theme') || 'system';
+            if (saved === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', saved);
+            }
+        })();
+    </script>
+</head>
+<body class="antialiased">
+
+    <!-- Theme Switcher -->
+    <button class="theme-toggle" id="theme-btn" onclick="cycleTheme()">
+        <i data-lucide="monitor" id="theme-icon" class="w-4 h-4"></i>
+        <span id="theme-label">System</span>
+    </button>
+
+    <!-- A. NAVBAR -->
+    <div class="fixed top-0 w-full z-50 px-4 py-4 flex justify-center">
+        <nav id="navbar" class="nav-pill px-6 py-3 flex items-center justify-between w-full max-w-5xl">
+            <div class="flex items-center gap-2">
+                <svg width="24" height="24" viewBox="0 0 16 16" fill="var(--text-primary)"><path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/></svg>
+                <span class="font-serif text-xl font-bold tracking-tight" style="color:var(--text-primary)">ROPIAS</span>
+            </div>
+            <div class="hidden md:flex gap-8 text-sm font-medium" style="color:var(--text-secondary)">
+                <a href="#how-it-works" class="hover:opacity-70 transition">How It Works</a>
+                <a href="#features" class="hover:opacity-70 transition">Crops</a>
+                <a href="#who" class="hover:opacity-70 transition">For Officers</a>
+                <a href="#manifesto" class="hover:opacity-70 transition">About</a>
+            </div>
+            <div>
+                <a href="{{ url_for('auth.login') }}" class="btn-navy px-5 py-2 rounded-full text-sm font-semibold inline-block">Sign In</a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- B. HERO SECTION -->
+    <section class="relative w-full h-[100dvh] overflow-hidden flex items-end pb-20 px-6 md:px-16" id="hero">
+        <div class="absolute inset-0 z-0">
+            <!-- Aerial Kenya Farm Unsplash Image -->
+            <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1800" alt="Kenya Farmland" class="w-full h-full object-cover">
+            <!-- Dynamic Gradient Overlay based on Theme -->
+            <div class="absolute inset-0" style="background: var(--hero-gradient);"></div>
+        </div>
+
+        <div class="relative z-10 w-full max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-10">
+            <div class="max-w-2xl hwa">
+                <div class="hero-tag font-sans font-medium tracking-widest text-sm mb-4 uppercase" style="color: var(--accent);">NASA POWER SATELLITE INTELLIGENCE</div>
+                <h1 class="font-sans font-bold text-5xl md:text-7xl leading-none mb-2" style="color: #FFF;">Know before</h1>
+                <h1 class="font-serif italic text-6xl md:text-8xl leading-none mb-6" style="color: #C8D9E6;">you plant.</h1>
+                <p class="hero-body font-sans font-light text-lg md:text-xl leading-relaxed max-w-lg mb-8" style="color: #C8D9E6;">
+                    ROPIAS reads 60 days of real satellite data to tell Kenya's farmers whether rainfall is true or false — before a single seed goes in the ground.
+                </p>
+                <div class="hero-ctas flex flex-wrap gap-4">
+                    <a href="{{ url_for('auth.login') }}" class="btn-navy px-8 py-4 rounded-full font-semibold text-lg flex items-center gap-2">
+                        Get Started Free <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </a>
+                    <a href="#how-it-works" class="btn-ghost px-8 py-4 rounded-full font-semibold text-lg flex items-center gap-2" style="color: #C8D9E6;">
+                        See How It Works <i data-lucide="arrow-down" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Floating Data Pill -->
+            <div class="floating-pill bg-gray-900/80 backdrop-blur-md border border-gray-700 p-5 rounded-2xl hidden md:block">
+                <div class="font-mono text-xs text-green-400 mb-2 flex items-center gap-2"><span class="pulse-dot"></span> LIVE NASA POWER API</div>
+                <div class="font-mono text-sm text-gray-300">PRECTOTCORR + GWETROOT</div>
+                <div class="font-mono text-xs text-gray-500 mt-1">0.5° × 0.5° grid · 48hr latency</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- C. TRUST STRIP -->
+    <section id="trust" class="border-y py-3 overflow-hidden" style="background-color: var(--bg-card); border-color: var(--border);">
+        <div class="trust-marquee font-mono text-xs uppercase font-medium" style="color: var(--text-muted); width: 200%;">
+            <!-- Cloned content for smooth infinite marquee -->
+            <div class="flex justify-around w-full" style="min-width: 100vw;">
+                <span>🌍 Western Kenya & Rift Valley</span>
+                <span>🛰️ NASA POWER Satellite Data</span>
+                <span>🌾 37 Kenya Crops Supported</span>
+                <span>📱 Works on Feature Phones (USSD)</span>
+                <span>🎓 KCA University Research Project</span>
+            </div>
+            <div class="flex justify-around w-full" style="min-width: 100vw;">
+                <span>🌍 Western Kenya & Rift Valley</span>
+                <span>🛰️ NASA POWER Satellite Data</span>
+                <span>🌾 37 Kenya Crops Supported</span>
+                <span>📱 Works on Feature Phones (USSD)</span>
+                <span>🎓 KCA University Research Project</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- D. FEATURES -->
+    <section id="features" class="py-24 px-6 md:px-16 w-full max-w-7xl mx-auto">
+        <div class="grid lg:grid-cols-3 gap-8">
+            
+            <!-- Card 1: Advisory Shuffler -->
+            <div class="ropias-card p-8 feat-card flex flex-col h-[420px]">
+                <h3 class="font-serif text-2xl mb-6" style="color:var(--text-primary)">Never plant on a false alarm again</h3>
+                <div class="relative flex-grow">
+                    <!-- A -->
+                    <div class="abs-card absolute w-full p-4 rounded-xl border-l-4 transition-all duration-700 ease-in-out" style="background:rgba(46,125,82,0.1); border-color:var(--green-safe); top:0; opacity:1; z-index:10; transform:translateY(0) scale(1);">
+                        <div class="font-bold flex items-center gap-2 mb-2" style="color:var(--green-safe)"><i data-lucide="check-circle-2" class="w-4 h-4"></i> TRUE ONSET</div>
+                        <p class="text-sm font-medium mb-2" style="color:var(--text-primary)">25.7mm confirmed · No dry spell · Safe to plant Maize</p>
+                        <div class="font-mono text-xs opacity-70">Kakamega · Today</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: The Satellite Feed -->
+            <div class="ropias-card p-8 feat-card flex flex-col h-[420px]">
+                <h3 class="font-serif text-2xl mb-6" style="color:var(--text-primary)">Real NASA data. No guesswork.</h3>
+                <div class="flex-grow rounded-xl p-4 font-mono text-xs leading-relaxed overflow-hidden relative" style="background-color:rgba(0,0,0,0.03);">
+                    <div class="absolute top-3 right-3 flex items-center gap-2 text-[10px] font-bold" style="color:var(--text-muted)"><span class="pulse-dot"></span>LIVE FEED</div>
+                    <div id="typewriter" class="mt-4" style="color:var(--text-secondary)"></div><span class="cursor-blink font-bold" style="color:var(--text-primary)">_</span>
+                </div>
+            </div>
+
+            <!-- Card 3: The Crop Selector -->
+            <div class="ropias-card p-8 feat-card flex flex-col h-[420px]">
+                <h3 class="font-serif text-2xl mb-6" style="color:var(--text-primary)">Calibrated for Kenya's real crops</h3>
+                <div class="flex flex-wrap gap-2 mb-6" id="crop-pills">
+                    <span class="px-3 py-1 text-xs rounded-full font-medium transition-colors" style="background:var(--accent); color:#fff">Maize</span>
+                    <span class="px-3 py-1 text-xs rounded-full font-medium" style="background:rgba(0,0,0,0.05); color:var(--text-muted)">Beans</span>
+                    <span class="px-3 py-1 text-xs rounded-full font-medium" style="background:rgba(0,0,0,0.05); color:var(--text-muted)">Sorghum</span>
+                    <span class="px-3 py-1 text-xs rounded-full font-medium" style="background:rgba(0,0,0,0.05); color:var(--text-muted)">Tea</span>
+                </div>
+                <div class="mt-auto pt-4 border-t" style="border-color:var(--border);">
+                    <div class="font-sans font-bold text-sm mb-2" style="color:var(--text-primary)">Maize (Mahindi)</div>
+                    <div class="grid grid-cols-2 gap-y-2 font-mono text-xs" style="color:var(--text-muted)">
+                        <div>Threshold:</div><div style="color:var(--text-primary)">20mm/2d</div>
+                        <div>Dry Spell:</div><div style="color:var(--text-primary)">7 days max</div>
+                        <div>Soil Wetness:</div><div style="color:var(--text-primary)">>30% Req</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- E. THE PROBLEM / MANIFESTO -->
+    <section id="manifesto" class="relative py-32 px-6 w-full flex items-center justify-center overflow-hidden" style="background-color: #1A2530;">
+        <div class="absolute inset-0 z-0 opacity-[0.12]" style="background-image: url('https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=1600'); background-size: cover; background-attachment: fixed;"></div>
+        
+        <div class="relative z-10 max-w-4xl text-center">
+            <p class="font-sans text-lg mb-6" style="color: #4A6878;">Traditional farming calendars told Kenyan farmers:</p>
+            <h2 class="font-serif italic text-4xl md:text-6xl text-white mb-16 word-reveal" id="wr-1">
+                Plant when the Long Rains begin in March.
+            </h2>
+            
+            <p class="font-sans text-lg mb-6 mt-12" style="color: #4A6878;">Climate change broke that calendar.</p>
+            <h2 class="font-serif italic text-5xl md:text-7xl mb-12 word-reveal" style="color: var(--green-safe);" id="wr-2">
+                ROPIAS gives it back.
+            </h2>
+            
+            <p class="font-sans font-light text-lg md:text-xl leading-loose mx-auto mt-8 max-w-2xl word-reveal" style="color: #C8D9E6;" id="wr-3">
+                False onsets — brief early rains followed by 14-21 day dry spells — now cost Kenyan smallholder farmers their entire seasonal investment in seeds, fertiliser, and labour. ROPIAS detects the difference before the seed goes in the ground.
+            </p>
+        </div>
+    </section>
+
+    <!-- F. HOW IT WORKS (Sticky Stacking) -->
+    <section id="how-it-works" class="bg-black relative">
+        <div class="sticky-card-container" id="stack-container">
+            
+            <!-- Card 1 -->
+            <div class="sticky-card stack-panel" style="background-color: var(--bg-page); z-index:1;" id="panel-1">
+                <div class="w-full max-w-5xl px-6 grid md:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <div class="font-mono text-sm tracking-widest mb-4" style="color:var(--accent)">STEP 01</div>
+                        <h2 class="font-serif text-4xl md:text-6xl mb-6" style="color:var(--text-primary)">Enter your farm's GPS coordinates</h2>
+                        <p class="font-sans text-xl leading-relaxed" style="color:var(--text-muted)">Or tap 'Use My Location' on your phone. ROPIAS works for any location within Kenya's agricultural zones.</p>
+                        <div class="mt-8 font-mono text-sm inline-block px-4 py-2 rounded border" style="background:var(--bg-card); color:var(--text-primary); border-color:var(--border);">📍 0.2800°N, 34.7500°E</div>
+                    </div>
+                    <div class="relative aspect-square rounded-full border border-dashed flex items-center justify-center" style="border-color:var(--accent);">
+                        <div class="absolute w-64 h-64 rounded-full" style="background: radial-gradient(circle, rgba(86,124,141,0.2) 0%, transparent 70%);"></div>
+                        <div class="pulse-dot" style="width:16px; height:16px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="sticky-card stack-panel" style="background-color: var(--bg-card); z-index:2; top:100vh;" id="panel-2">
+                <div class="w-full max-w-5xl px-6 grid md:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <div class="font-mono text-sm tracking-widest mb-4" style="color:var(--accent)">STEP 02</div>
+                        <h2 class="font-serif text-4xl md:text-6xl mb-6" style="color:var(--text-primary)">NASA reads the sky</h2>
+                        <p class="font-sans text-xl leading-relaxed" style="color:var(--text-muted)">60 days of corrected daily precipitation (PRECTOTCORR) and root zone soil wetness (GWETROOT) from NASA's POWER API — no physical sensors, no equipment to install.</p>
+                        <div class="mt-8 font-mono text-sm inline-block px-4 py-2 rounded" style="background:var(--text-primary); color:var(--bg-card);">🛰️ Fetching PRECTOTCORR: 25.7mm</div>
+                    </div>
+                    <div class="grid grid-cols-4 grid-rows-4 gap-2 w-full h-80 opacity-80" id="data-grid">
+                        <!-- JS fills this with cells -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="sticky-card stack-panel" style="background-color: #2F4156; z-index:3; top:200vh;" id="panel-3">
+                <div class="w-full max-w-5xl px-6 grid md:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <div class="font-mono text-sm tracking-widest mb-4 text-[#C8D9E6]">STEP 03</div>
+                        <h2 class="font-serif text-4xl md:text-6xl mb-6 text-white">Plain-language advisory delivered instantly</h2>
+                        <p class="font-sans text-xl leading-relaxed text-[#C8D9E6] opacity-90">Green means safe to plant. Red means wait. No agronomic knowledge required.</p>
+                        <div class="mt-8 font-mono text-sm font-bold inline-block px-4 py-3 rounded text-white" style="background:var(--green-safe);"><span class="pulse-dot bg-white shadow-none mr-2"></span>TRUE ONSET — SAFE TO PLANT</div>
+                    </div>
+                    <div class="w-full h-40 border-b-2 border-[#567C8D] relative overflow-hidden flex items-end pb-8">
+                        <svg viewBox="0 0 100 20" preserveAspectRatio="none" class="w-full h-full stroke-[#C8D9E6] stroke-2 fill-none">
+                            <path d="M0,10 L30,10 L35,2 L40,18 L45,10 L100,10" class="vector-path" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- G. WHO IT'S FOR -->
+    <section id="who" class="py-24 px-6 md:px-16 max-w-7xl mx-auto">
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="ropias-card p-12 flex flex-col justify-between" style="background-color:var(--sky); border-color:transparent;">
+                <div>
+                    <i data-lucide="sprout" class="w-10 h-10 mb-6" style="color:var(--navy);"></i>
+                    <h3 class="font-serif text-3xl mb-4" style="color:var(--navy);">For Farmers</h3>
+                    <p class="font-sans text-lg mb-10 opacity-80" style="color:var(--navy);">Get today's planting advisory for your farm in seconds. Works on smartphones and feature phones. Alerts via WhatsApp every morning at 6am.</p>
+                </div>
+                <a href="{{ url_for('auth.login') }}" class="btn-navy w-max px-6 py-3 font-semibold rounded-lg flex items-center gap-2 mag-btn">Start as a Farmer <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+            </div>
+            
+            <div class="ropias-card p-12 flex flex-col justify-between" style="background-color:var(--navy); border-color:transparent;">
+                <div>
+                    <i data-lucide="map" class="w-10 h-10 mb-6 text-white"></i>
+                    <h3 class="font-serif text-3xl mb-4 text-white">For Extension Officers</h3>
+                    <p class="font-sans text-lg mb-10 text-[#C8D9E6]">Monitor every farm in your region from one dashboard. View onset status across all your farmers. Send bulk advisories. Track soil moisture across your zone.</p>
+                </div>
+                <a href="{{ url_for('auth.login') }}" class="btn-ghost text-white w-max px-6 py-3 font-semibold rounded-lg flex items-center gap-2 mag-btn">Sign In as Officer <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- H. PRICING -->
+    <section id="pricing" class="py-16 px-6 max-w-7xl mx-auto">
+        <div class="grid md:grid-cols-3 gap-6 items-end">
+            <!-- Tier 1 -->
+            <div class="ropias-card p-8 transition-transform hover:-translate-y-2">
+                <h4 class="font-sans font-bold text-xl mb-1" style="color:var(--text-primary);">Farmer User</h4>
+                <div class="font-serif text-4xl mb-6" style="color:var(--text-primary);">Free Forever</div>
+                <div class="w-full h-px mb-6" style="background:var(--border);"></div>
+                <ul class="space-y-3 mb-8 text-sm" style="color:var(--text-muted);">
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>Daily onset advisory</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>Irrigation advisory</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>37 crop support</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>WhatsApp alerts</li>
+                </ul>
+                <a href="{{ url_for('auth.login') }}" class="block text-center w-full py-3 rounded-lg font-semibold btn-ghost" style="color:var(--text-primary);">Get Started Free</a>
+            </div>
+
+            <!-- Tier 2 -->
+            <div class="ropias-card p-8 border-2 shadow-xl mb-4 md:mb-0 transition-transform hover:-translate-y-2" style="background-color:var(--navy); border-color:var(--accent);">
+                <div class="text-xs font-bold tracking-wider px-3 py-1 bg-[#567C8D] text-white rounded-full inline-block mb-3">ADMIN ACCESS</div>
+                <h4 class="font-sans font-bold text-xl mb-1 text-white">Officer Console</h4>
+                <div class="font-serif text-4xl mb-6 text-white">By Request</div>
+                <div class="w-full h-px mb-6" style="background:rgba(255,255,255,0.1);"></div>
+                <ul class="space-y-3 mb-8 text-sm text-[#C8D9E6]">
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-400"></i>Everything in Farmer</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-400"></i>Multi-farm dashboard</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-400"></i>Bulk SMS advisory</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-400"></i>Farmer account management</li>
+                </ul>
+                <a href="mailto:admin@ropias.ac.ke" class="block text-center w-full py-3 rounded-lg font-semibold text-white" style="background-color:var(--accent);">Request Access</a>
+            </div>
+
+            <!-- Tier 3 -->
+            <div class="ropias-card p-8 transition-transform hover:-translate-y-2">
+                <h4 class="font-sans font-bold text-xl mb-1" style="color:var(--text-primary);">Research / NGO</h4>
+                <div class="font-serif text-4xl mb-6" style="color:var(--text-primary);">API Access</div>
+                <div class="w-full h-px mb-6" style="background:var(--border);"></div>
+                <ul class="space-y-3 mb-8 text-sm" style="color:var(--text-muted);">
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>REST API access</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>Historical season data</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>ML confidence scores</li>
+                    <li><i data-lucide="check" class="w-4 h-4 inline mr-2 text-green-600"></i>Bulk GPS analysis</li>
+                </ul>
+                <a href="#" class="block text-center w-full py-3 rounded-lg font-semibold btn-ghost" style="color:var(--text-primary);">Contact Us</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- I. FOOTER -->
+    <footer class="mt-20 pt-16 pb-8 px-6 md:px-16 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]" style="background-color: #1A2530; border-radius: 40px 40px 0 0;">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-12 mb-16">
+            <div>
+                <div class="flex items-center gap-2 mb-4">
+                    <svg width="24" height="24" viewBox="0 0 16 16" fill="#C8D9E6"><path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/></svg>
+                    <span class="font-serif text-xl font-bold tracking-tight text-[#C8D9E6]">ROPIAS</span>
+                </div>
+                <p class="text-sm text-[#8BAFC0] mb-1">Rainfall Onset Prediction & Irrigation Advisory System</p>
+                <p class="text-sm text-[#8BAFC0] mb-1">Built at KCA University, Nairobi, Kenya</p>
+                <p class="text-sm text-[#8BAFC0]">Powered by NASA POWER Open Data</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm font-medium text-[#C8D9E6]">
+                <a href="#how-it-works" class="hover:text-white transition">How It Works</a>
+                <a href="#features" class="hover:text-white transition">Crop Reference</a>
+                <a href="#who" class="hover:text-white transition">For Officers</a>
+                <a href="{{ url_for('auth.login') }}" class="hover:text-white transition">Sign In / Register</a>
+            </div>
+            
+            <div class="font-mono text-xs text-[#8BAFC0] bg-[#243040] p-4 rounded-xl border border-[#3A5060]">
+                <div class="flex items-center gap-2 mb-3 text-green-400 font-bold"><span class="pulse-dot"></span> SYSTEM OPERATIONAL</div>
+                <div class="mb-1">NASA API: Connected</div>
+                <div class="mb-1">Data latency: 24–48hrs</div>
+                <div>Coverage: Kenya (−5° to 5°N)</div>
+            </div>
+        </div>
+        
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#3A5060] text-xs text-[#8BAFC0]">
+            <div>&copy; 2025 ROPIAS &middot; KCA University</div>
+            <div class="mt-4 md:mt-0 flex gap-6">
+                <span>Data: NASA POWER (public domain)</span>
+                <a href="#" class="hover:text-white transition line-through">GitHub ↗</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <!-- GSAP & ScrollTrigger Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // 1. Theme Configuration System
+        const THEMES = ['system', 'light', 'dark'];
+        const THEME_LABELS = { system: 'System', light: 'Light', dark: 'Dark' };
+        const THEME_ICONS = { system: 'monitor', light: 'sun', dark: 'moon' };
+
+        function updateThemeUI(t) {
+            document.getElementById('theme-label').textContent = THEME_LABELS[t];
+            const iconEl = document.getElementById('theme-icon');
+            iconEl.innerHTML = '';
+            const newIcon = document.createElement('i');
+            newIcon.setAttribute('data-lucide', THEME_ICONS[t]);
+            newIcon.className = "w-4 h-4";
+            iconEl.appendChild(newIcon);
+            lucide.createIcons();
+        }
+
+        function cycleTheme() {
+            let current = localStorage.getItem('ropias-theme') || 'system';
+            let next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+            localStorage.setItem('ropias-theme', next);
+            if(next === 'system') {
+                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', next);
+            }
+            updateThemeUI(next);
+        }
+        
+        // Initialize Theme UI on load
+        updateThemeUI(localStorage.getItem('ropias-theme') || 'system');
+
+        // Note: For Safari/macOS native media query listener (skipped for brevity)
+
+        // 2. GSAP Animations Definition
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Navbar Scroll
+        ScrollTrigger.create({
+            start: "top -80px",
+            onEnter: () => document.getElementById("navbar").classList.add("glass-nav-scrolled"),
+            onLeaveBack: () => document.getElementById("navbar").classList.remove("glass-nav-scrolled")
+        });
+
+        // Hero Entrance
+        const heroTl = gsap.timeline({delay: 0.2});
+        heroTl.from(".hero-tag", { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" })
+              .from(".hero-line1", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, "-=0.3")
+              .from(".hero-line2", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.4")
+              .from(".hero-body", { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" }, "-=0.3")
+              .from(".hero-ctas", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, "-=0.2");
+
+        // Feature Cards Sweep
+        gsap.from(".feat-card", {
+            scrollTrigger: { trigger: "#features", start: "top 80%" },
+            y: 40, opacity: 0, duration: 0.7, stagger: 0.15, ease: "power3.out"
+        });
+
+        // Manifesto Word Reveal
+        const breaks = document.querySelectorAll(".word-reveal");
+        breaks.forEach(el => {
+            const words = el.innerText.split(" ");
+            el.innerHTML = "";
+            words.forEach(w => {
+                const s = document.createElement("span");
+                s.innerText = w + " ";
+                el.appendChild(s);
+            });
+            gsap.to(el.querySelectorAll("span"), {
+                scrollTrigger: { trigger: el, start: "top 85%" },
+                opacity: 1, y: 0, stagger: 0.04, duration: 0.6, ease: "power2.out"
+            });
+        });
+
+        // Sticky Stacking Archive Cards
+        // We pin the container, and slide/scale the cards
+        let panels = gsap.utils.toArray(".stack-panel");
+        
+        let stackTl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#stack-container",
+                start: "top top",
+                end: "+=200%",
+                scrub: true,
+                pin: true,
+                anticipatePin: 1
+            }
+        });
+
+        // Panel 2 overlaps Panel 1
+        stackTl.to("#panel-1", { scale: 0.92, opacity: 0.4, duration: 1 }, 0)
+               .to("#panel-2", { top: 0, duration: 1 }, 0);
+               
+        // Panel 3 overlaps Panel 2
+        stackTl.to("#panel-2", { scale: 0.92, opacity: 0.4, duration: 1 }, 1)
+               .to("#panel-3", { top: 0, duration: 1 }, 1);
+
+        // Magnetic Buttons Hover
+        document.querySelectorAll('.mag-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => gsap.to(btn, { scale: 1.03, duration: 0.3, ease: "cubic-bezier(0.25, 0.46, 0.45, 0.94)" }));
+            btn.addEventListener('mouseleave', () => gsap.to(btn, { scale: 1, duration: 0.3, ease: "cubic-bezier(0.25, 0.46, 0.45, 0.94)" }));
+        });
+
+        // 3. Mini UI Simulations
+        // Typewriter Effect
+        const typeDest = document.getElementById("typewriter");
+        const feedText = [
+            "> Fetching for 0.28°N...",
+            "> 60-day array loaded ✓",
+            "> 2-day sum: 25.7mm (>20mm) ✓",
+            "> No dry spell ✓",
+            "> TRUE ONSET",
+            "> GWETROOT: 54% (Optimal)"
+        ];
+        let feedIdx = 0;
+        setInterval(() => {
+            if(feedIdx >= feedText.length) { typeDest.innerHTML = ""; feedIdx = 0; }
+            typeDest.innerHTML += feedText[feedIdx] + "<br>";
+            feedIdx++;
+        }, 800);
+
+        // Data Grid Flash
+        const grid = document.getElementById("data-grid");
+        for(let i=0; i<16; i++) {
+            const cell = document.createElement("div");
+            cell.className = "w-full h-full rounded transition-colors duration-500";
+            cell.style.backgroundColor = "rgba(122,145,160,0.1)";
+            grid.appendChild(cell);
+        }
+        setInterval(() => {
+            const cells = grid.children;
+            const r = Math.floor(Math.random() * cells.length);
+            cells[r].style.backgroundColor = (Math.random() > 0.5) ? "rgba(46,125,82,0.4)" : "rgba(86,124,141,0.4)";
+            setTimeout(() => { cells[r].style.backgroundColor = "rgba(122,145,160,0.1)"; }, 1500);
+        }, 300);
+
+    </script>
+</body>
+</html>

@@ -81,15 +81,12 @@ def create_app():
     def inject_globals():
         return {"now": datetime.utcnow()}
 
-    # ── Root redirect ─────────────────────────────────────────────────────────
+    # ── Root Landing Page ─────────────────────────────────────────────────────
     @app.route("/")
     def index():
-        """Root: redirect to login if not authenticated, else to role dashboard."""
-        if current_user.is_authenticated:
-            if current_user.is_admin:
-                return redirect(url_for("officer.dashboard"))
-            return redirect(url_for("farmer.dashboard"))
-        return redirect(url_for("auth.login"))
+        """The Public Face of ROPIAS — Cinematic Landing Page."""
+        from flask import render_template
+        return render_template("landing.html", current_user=current_user)
 
     # ── Database init + seed ──────────────────────────────────────────────────
     with app.app_context():
