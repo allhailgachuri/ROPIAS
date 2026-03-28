@@ -17,6 +17,20 @@ class OnsetResult(Enum):
     INSUFFICIENT_DATA = "Insufficient Data"
     UNCERTAIN = "UNCERTAIN"
 
+
+def compute_rule_confidence(cumulative_rain: float, threshold: float,
+                             dry_spell_found: bool, validation_days_checked: int) -> int:
+    """
+    Deterministic confidence score (45–95%) based on agronomic rule inputs.
+    Used when ML model is not available or as a fallback baseline.
+    """
+    base = min(cumulative_rain / threshold, 1.5) * 60           # 0–90 pts
+    validation_bonus = (validation_days_checked / 30) * 10       # 0–10 pts
+    dry_spell_penalty = -25 if dry_spell_found else 0
+    confidence = round(min(95, max(45, base + validation_bonus + dry_spell_penalty)))
+    return confidence
+
+
 # Global Constants that aren't crop specific
 DRY_SPELL_THRESHOLD_MM = 1.0 # agronomic source: rainfall intensity under 1mm mostly lost to evaporation
 VALIDATION_WINDOW_DAYS = 30  # agronomic source: early vegetative stage monitoring window

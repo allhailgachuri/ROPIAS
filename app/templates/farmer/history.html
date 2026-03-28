@@ -1,71 +1,133 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid px-3 px-md-5 py-4" style="max-width: 1400px; margin: 0 auto;">
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1100px; margin: 0 auto;">
 
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-        <h4 class="font-body fw-bold m-0 d-flex align-items-center gap-2" style="color: var(--text-primary);">
-            <i data-lucide="bar-chart-2" class="w-6 h-6 text-[var(--teal)]"></i> My Advisory History
-        </h4>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn border font-body text-sm" style="background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border)!important;">All Crops <i data-lucide="chevron-down" class="w-4 h-4 ms-2"></i></button>
-            <button class="btn border font-body text-sm" style="background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border)!important;">Last 30 Days <i data-lucide="chevron-down" class="w-4 h-4 ms-2"></i></button>
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+        <div>
+            <h4 class="font-body fw-bold m-0 d-flex align-items-center gap-2" style="color: var(--text-primary);">
+                <i data-lucide="bar-chart-2" style="width: 20px; color: var(--teal);"></i> My Analysis History
+                <span class="font-mono" style="font-size:14px; color:var(--text-muted); font-weight:400;">({{ logs|length }}/30)</span>
+            </h4>
+            <p class="font-body m-0 mt-1" style="color: var(--text-muted); font-size: 13px;">Your last {{ logs|length }} advisory run{% if logs|length != 1 %}s{% endif %}. New runs push out the oldest when you reach 30.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('farmer.download_history') }}" class="btn btn-ghost d-flex gap-2 px-3 py-2" style="font-size:13px;">
+                <i data-lucide="download" style="width:14px;"></i> Export CSV
+            </a>
+            <a href="{{ url_for('farmer.dashboard') }}" class="btn btn-primary d-flex gap-2 px-3 py-2" style="font-size:13px;">
+                <i data-lucide="plus" style="width:14px;"></i> New Analysis
+            </a>
         </div>
     </div>
 
-    <div class="ropias-card overflow-hidden">
-        <div class="table-responsive">
-            <table class="table mb-0" style="color: var(--text-secondary);">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--border);">
-                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Date</th>
-                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Crop</th>
-                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Onset Result</th>
-                        <th class="font-body fw-bold py-3 px-4" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Soil</th>
-                        <th class="font-body fw-bold py-3 px-4 d-none d-md-table-cell" style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Action taken</th>
-                    </tr>
-                </thead>
-                <tbody style="border-top: none;">
-                    {% if logs %}
-                        {% for log in logs %}
-                        <tr style="border-bottom: 1px solid var(--border); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='var(--bg-subtle)'" onmouseout="this.style.backgroundColor='transparent'">
-                            <td class="font-mono py-4 px-4 align-middle" style="font-size: 13px;">{{ log.created_at.strftime('%b %d, %Y') }}</td>
-                            <td class="font-body py-4 px-4 align-middle text-capitalize" style="font-size: 14px;">{{ log.crop_key }}</td>
-                            <td class="align-middle px-4">
-                                {% if log.onset_result == "TRUE_ONSET" %}
-                                    <span class="badge rounded-pill d-inline-flex gap-1 align-items-center" style="background-color: var(--green-light); color: var(--green-safe); font-size: 12px; padding: 6px 10px; font-weight: 500;">
-                                        <i data-lucide="check-circle" class="w-3 h-3"></i> True Onset
-                                    </span>
-                                {% elif log.onset_result == "FALSE_ONSET" %}
-                                    <span class="badge rounded-pill d-inline-flex gap-1 align-items-center" style="background-color: var(--red-light); color: var(--red-danger); font-size: 12px; padding: 6px 10px; font-weight: 500;">
-                                        <i data-lucide="alert-triangle" class="w-3 h-3"></i> False Onset
-                                    </span>
-                                {% else %}
-                                    <span class="badge rounded-pill d-inline-flex gap-1 align-items-center" style="background-color: var(--bg-subtle); color: var(--text-secondary); font-size: 12px; padding: 6px 10px; font-weight: 500;">
-                                        <i data-lucide="clock" class="w-3 h-3"></i> None
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td class="font-mono py-4 px-4 align-middle fw-bold" style="font-size: 13px; color: {% if log.moisture_pct < 30 %}var(--red-danger){% elif log.moisture_pct > 70 %}var(--blue-water){% else %}var(--green-safe){% endif %};">
-                                {{ "%.1f"|format(log.moisture_pct) }}%
-                            </td>
-                            <td class="py-4 px-4 align-middle d-none d-md-table-cell">
-                                <span class="badge" style="background-color: var(--bg-input); color: var(--text-primary); font-weight: 400; letter-spacing: 0.5px;">Pending Field Data</span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <i data-lucide="database" class="w-8 h-8 mx-auto mb-3" style="color: var(--text-muted);"></i>
-                                <p class="font-body m-0" style="color: var(--text-secondary);">No advisories processed yet. Run your first analysis on the dashboard.</p>
-                            </td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
+    {% if logs %}
+    <!-- History table (desktop) -->
+    <div class="d-none d-md-block ropias-card overflow-hidden" style="border-radius: var(--radius-lg);">
+        <table class="w-100" style="border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--bg-subtle); border-bottom: 2px solid var(--border);">
+                    <th class="font-mono" style="padding: 14px 20px; font-size:11px; font-weight:500; color:var(--text-muted); text-align:left;">DATE & TIME</th>
+                    <th class="font-mono" style="padding: 14px 16px; font-size:11px; font-weight:500; color:var(--text-muted); text-align:left;">CROP</th>
+                    <th class="font-mono" style="padding: 14px 16px; font-size:11px; font-weight:500; color:var(--text-muted); text-align:left;">LOCATION</th>
+                    <th class="font-mono" style="padding: 14px 16px; font-size:11px; font-weight:500; color:var(--text-muted); text-align:left;">ONSET RESULT</th>
+                    <th class="font-mono" style="padding: 14px 16px; font-size:11px; font-weight:500; color:var(--text-muted); text-align:left;">MOISTURE</th>
+                    <th class="font-mono" style="padding: 14px 16px; font-size:11px; font-weight:500; color:var(--text-muted); text-align:left;">ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;"
+                    onmouseover="this.style.background='var(--bg-subtle)'"
+                    onmouseout="this.style.background='transparent'">
+                    <td style="padding: 14px 20px;">
+                        <div class="font-body" style="font-size:13px; color:var(--text-primary); font-weight:500;">
+                            {{ log.created_at.strftime('%b %d, %Y') }}
+                        </div>
+                        <div class="font-mono" style="font-size:11px; color:var(--text-muted);">
+                            {{ log.created_at.strftime('%I:%M %p') }}
+                        </div>
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <span class="font-body" style="font-size:13px; color:var(--text-primary); font-weight:500; text-transform:capitalize;">
+                            {{ log.crop_key.replace('_', ' ').title() if log.crop_key else 'N/A' }}
+                        </span>
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <span class="font-mono" style="font-size:11px; color:var(--teal);">
+                            {{ '%.3f'|format(log.latitude) }}°N, {{ '%.3f'|format(log.longitude) }}°E
+                        </span>
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <span class="font-body" style="font-size:12px; font-weight:600; padding:3px 8px; border-radius:999px;
+                            {% if log.onset_color == 'true' %}background:var(--green-light); color:var(--green-safe);
+                            {% elif log.onset_color == 'false' %}background:var(--red-light); color:var(--red-danger);
+                            {% else %}background:var(--bg-input); color:var(--text-muted);{% endif %}">
+                            {{ log.onset_result or 'N/A' }}
+                        </span>
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <span class="font-mono" style="font-size:13px; color:var(--text-primary);">
+                            {% if log.moisture_pct %}{{ '%.0f'|format(log.moisture_pct) }}%{% else %}—{% endif %}
+                        </span>
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <a href="{{ url_for('farmer.dashboard') }}?lat={{ log.latitude }}&lon={{ log.longitude }}&crop={{ log.crop_key or 'maize' }}"
+                           class="btn btn-ghost d-flex gap-1 align-items-center px-2 py-1" style="font-size:12px; height:32px;">
+                            <i data-lucide="refresh-cw" style="width:13px;"></i> Re-run
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+
+    <!-- History cards (mobile) -->
+    <div class="d-md-none d-flex flex-column gap-3">
+        {% for log in logs %}
+        <div class="ropias-card p-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <div class="font-body fw-bold" style="font-size:14px; color:var(--text-primary);">
+                        {{ log.crop_key.replace('_', ' ').title() if log.crop_key else 'N/A' }}
+                    </div>
+                    <div class="font-mono" style="font-size:11px; color:var(--teal);">
+                        {{ '%.3f'|format(log.latitude) }}°N, {{ '%.3f'|format(log.longitude) }}°E
+                    </div>
+                </div>
+                <span class="font-mono" style="font-size:11px; color:var(--text-muted);">
+                    {{ log.created_at.strftime('%b %d · %I:%M %p') }}
+                </span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="font-body" style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px;
+                    {% if log.onset_color == 'true' %}background:var(--green-light); color:var(--green-safe);
+                    {% elif log.onset_color == 'false' %}background:var(--red-light); color:var(--red-danger);
+                    {% else %}background:var(--bg-input); color:var(--text-muted);{% endif %}">
+                    {{ log.onset_result or 'N/A' }}
+                </span>
+                <a href="{{ url_for('farmer.dashboard') }}?lat={{ log.latitude }}&lon={{ log.longitude }}&crop={{ log.crop_key or 'maize' }}"
+                   class="btn btn-ghost d-flex gap-1 pe-2 py-1" style="font-size:12px; height:30px;">
+                    <i data-lucide="refresh-cw" style="width:12px;"></i> Re-run
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="ropias-card p-5 text-center">
+        <div style="font-size: 3rem; margin-bottom: 16px;">📊</div>
+        <h5 class="font-display fst-italic mb-2" style="color: var(--text-primary);">No analysis yet</h5>
+        <p class="font-body mb-4" style="color: var(--text-muted); font-size: 14px;">Run your first advisory to start your history.</p>
+        <a href="{{ url_for('farmer.dashboard') }}" class="btn btn-primary d-inline-flex gap-2">
+            <i data-lucide="play" style="width: 16px;"></i> Run First Analysis
+        </a>
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}

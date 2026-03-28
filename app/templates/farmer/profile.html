@@ -1,61 +1,208 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid px-3 px-md-5 py-4" style="max-width: 800px; margin: 0 auto;">
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 820px; margin: 0 auto;">
 
-    <div class="ropias-card p-4 p-md-5 mb-5 mt-3">
-        <h4 class="font-body fw-bold mb-4 d-flex align-items-center gap-2 pb-2 border-bottom" style="color: var(--text-primary); border-color: var(--border) !important;">
-            <i data-lucide="user" class="w-6 h-6 text-[var(--teal)]"></i> My Profile
-        </h4>
+    <h4 class="font-body fw-bold mb-1 d-flex align-items-center gap-2" style="color: var(--text-primary);">
+        <i data-lucide="user" style="width: 20px; color: var(--teal);"></i> My Profile
+    </h4>
+    <p class="mb-4" style="color: var(--text-muted); font-size: 13px; font-family: var(--font-body);">Manage your personal information, farm details, and alert preferences.</p>
 
-        <form method="POST" action="{{ url_for('farmer.profile') }}" class="mt-4">
-            
-            <div class="row g-4 mb-4">
-                <div class="col-12 col-md-6">
-                    <label class="form-label font-body fw-medium" style="font-size: 14px; color: var(--text-muted);">Full Name</label>
-                    <input type="text" class="form-control ropias-input" value="{{ current_user.full_name }}" disabled>
-                    <div class="form-text mt-1 text-xs" style="color: var(--text-muted);">Contact administrator to modify.</div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <label class="form-label font-body fw-medium" style="font-size: 14px; color: var(--text-muted);">Phone Number</label>
-                    <input type="text" name="phone" class="form-control ropias-input font-mono" value="{{ current_user.phone }}">
-                </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+            <div class="alert alert-{{ category }} mb-3" style="font-family:var(--font-body); font-size:14px; border-radius: var(--radius-md);">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- SECTION 1: Personal Information -->
+    <div class="profile-section">
+        <h3><i data-lucide="id-card" style="width:16px; display:inline; margin-right:6px; color:var(--teal);"></i>Personal Information</h3>
+        <div class="profile-avatar-row">
+            <div class="avatar-circle large">{{ user.avatar_initials or 'FG' }}</div>
+            <div>
+                <h5 style="font-family:var(--font-body); font-weight:600; color:var(--text-primary); margin:0 0 4px;">{{ user.full_name }}</h5>
+                <span class="role-badge">{{ user.role.title() }}</span>
+                <p style="font-family:var(--font-body); font-size:12px; color:var(--text-muted); margin: 4px 0 0;">
+                    Member since {{ user.created_at.strftime('%B %Y') if user.created_at else 'N/A' }}
+                </p>
             </div>
-
-            <h5 class="font-body fw-bold mb-3 mt-5" style="color: var(--text-primary); font-size: 16px;">Farm Location</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-6">
-                    <label class="form-label font-body fw-medium" style="font-size: 13px; color: var(--text-muted);">Latitude</label>
-                    <input type="number" step="any" name="latitude" id="latitude-input" class="form-control ropias-input font-mono" value="{{ current_user.farm_latitude or '' }}">
+        </div>
+        <form method="POST" action="{{ url_for('farmer.profile') }}">
+            <input type="hidden" name="action" value="personal">
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Full Name</label>
+                    <input type="text" class="form-control ropias-input" value="{{ user.full_name }}" disabled style="opacity:0.7;">
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Contact admin to modify</div>
                 </div>
-                <div class="col-6">
-                    <label class="form-label font-body fw-medium" style="font-size: 13px; color: var(--text-muted);">Longitude</label>
-                    <input type="number" step="any" name="longitude" id="longitude-input" class="form-control ropias-input font-mono" value="{{ current_user.farm_longitude or '' }}">
+                <div class="col-12 col-md-6">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Email Address</label>
+                    <input type="email" class="form-control ropias-input" value="{{ user.email }}" disabled style="opacity:0.7;">
                 </div>
                 <div class="col-12">
-                    <button type="button" class="btn btn-ghost w-100 py-2 d-flex gap-2 justify-content-center" onclick="useMyGPS()">
-                        <i data-lucide="map-pin" style="width:18px;"></i> Update with GPS
-                    </button>
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">WhatsApp Phone</label>
+                    <input type="text" name="phone" class="form-control ropias-input font-mono" value="{{ user.phone or '' }}" placeholder="+254 7XX XXX XXX">
                 </div>
             </div>
+            <button type="submit" class="btn btn-primary d-flex gap-2 px-4">
+                <i data-lucide="save" style="width:16px;"></i> Save Changes
+            </button>
+        </form>
+    </div>
 
-            <h5 class="font-body fw-bold mb-3 mt-5" style="color: var(--text-primary); font-size: 16px;">Alert Preferences</h5>
-            <div class="d-flex align-items-center gap-3 mb-5 p-3 rounded" style="background-color: var(--bg-subtle);">
-                <input class="form-check-input mt-0" type="checkbox" name="whatsapp_alerts" id="waCheck" style="width: 20px; height: 20px;" {% if current_user.whatsapp_alerts %}checked{% endif %}>
-                <label class="form-check-label font-body" for="waCheck" style="color: var(--text-secondary); cursor: pointer;">
-                    Receive automated Twilio WhatsApp alerts at 6:00 AM daily.
+    <!-- SECTION 2: Farm Details -->
+    <div class="profile-section">
+        <h3><i data-lucide="map-pin" style="width:16px; display:inline; margin-right:6px; color:var(--teal);"></i>My Farm</h3>
+        <form method="POST" action="{{ url_for('farmer.profile') }}">
+            <input type="hidden" name="action" value="farm">
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Latitude</label>
+                    <input type="number" step="any" name="latitude" id="profileLat" class="form-control ropias-input font-mono" value="{{ user.farm_latitude or '' }}" placeholder="0.2800">
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Longitude</label>
+                    <input type="number" step="any" name="longitude" id="profileLon" class="form-control ropias-input font-mono" value="{{ user.farm_longitude or '' }}" placeholder="34.7500">
+                </div>
+                <div class="col-12">
+                    <button type="button" onclick="useGPS()" class="w-100 d-flex justify-content-center align-items-center gap-2 py-2"
+                            style="background:var(--bg-input); border:1.5px solid var(--border); border-radius:var(--radius-md); font-family:var(--font-body); color:var(--text-primary); cursor:pointer; font-size:14px;" id="gpsProfileBtn">
+                        <i data-lucide="map-pin" style="width:16px;"></i> Update with GPS
+                    </button>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Region</label>
+                    <select name="region" class="form-control ropias-input">
+                        {% for r in ['Western Kenya','Rift Valley','Central Kenya','Eastern Kenya','Nyanza','Coast','North Eastern'] %}
+                        <option value="{{ r }}" {% if user.region == r %}selected{% endif %}>{{ r }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Primary Crop</label>
+                    <select name="crop" class="form-control ropias-input">
+                        <option value="maize" {% if user.preferred_crop == 'maize' %}selected{% endif %}>🌽 Maize</option>
+                        <option value="beans" {% if user.preferred_crop == 'beans' %}selected{% endif %}>🫘 Beans</option>
+                        <option value="tomato" {% if user.preferred_crop == 'tomato' %}selected{% endif %}>🍅 Tomato</option>
+                        <option value="tea" {% if user.preferred_crop == 'tea' %}selected{% endif %}>🍵 Tea</option>
+                        <option value="coffee" {% if user.preferred_crop == 'coffee' %}selected{% endif %}>☕ Coffee</option>
+                        <option value="kale" {% if user.preferred_crop == 'kale' %}selected{% endif %}>🥬 Sukuma Wiki</option>
+                        <option value="irish_potato" {% if user.preferred_crop == 'irish_potato' %}selected{% endif %}>🥔 Potatoes</option>
+                        <option value="cassava" {% if user.preferred_crop == 'cassava' %}selected{% endif %}>🍠 Cassava</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary d-flex gap-2 px-4">
+                <i data-lucide="save" style="width:16px;"></i> Save Farm Details
+            </button>
+        </form>
+    </div>
+
+    <!-- SECTION 3: Alert Preferences -->
+    <div class="profile-section">
+        <h3><i data-lucide="bell" style="width:16px; display:inline; margin-right:6px; color:var(--teal);"></i>Alert Preferences</h3>
+        <form method="POST" action="{{ url_for('farmer.profile') }}">
+            <input type="hidden" name="action" value="alerts">
+            <div class="d-flex flex-column gap-3 mb-4">
+                <label class="d-flex align-items-center gap-3 p-3 rounded" style="background:var(--bg-subtle); cursor:pointer; border-radius:var(--radius-md);">
+                    <input type="checkbox" name="whatsapp_alerts" style="width:20px; height:20px;" {% if user.whatsapp_alerts %}checked{% endif %}>
+                    <div>
+                        <div style="font-family:var(--font-body); font-weight:500; color:var(--text-primary); font-size:14px;">📱 WhatsApp Advisory — 6:00 AM daily</div>
+                        <div style="font-family:var(--font-body); font-size:12px; color:var(--text-muted);">Receive daily onset and soil moisture advisory on WhatsApp</div>
+                    </div>
+                </label>
+                <label class="d-flex align-items-center gap-3 p-3 rounded" style="background:var(--bg-subtle); cursor:not-allowed; opacity:0.5; border-radius:var(--radius-md);">
+                    <input type="checkbox" disabled>
+                    <div>
+                        <div style="font-family:var(--font-body); font-weight:500; color:var(--text-primary); font-size:14px;">💬 SMS Alerts <span style="font-size:11px; background:var(--bg-input); padding:2px 6px; border-radius:999px; color:var(--text-muted);">Coming soon</span></div>
+                    </div>
                 </label>
             </div>
-
-            <div class="d-flex gap-3 pt-3 border-top" style="border-color: var(--border) !important;">
-                <button type="submit" class="btn btn-primary d-flex align-items-center gap-2 px-5 py-3 flex-grow-1 flex-md-grow-0">
-                    <i data-lucide="save" class="w-4 h-4"></i> Save Changes
-                </button>
-            </div>
-
+            <button type="submit" class="btn btn-primary d-flex gap-2 px-4">
+                <i data-lucide="save" style="width:16px;"></i> Save Preferences
+            </button>
         </form>
+    </div>
 
+    <!-- SECTION 4: Activity Stats -->
+    <div class="profile-section">
+        <h3><i data-lucide="activity" style="width:16px; display:inline; margin-right:6px; color:var(--teal);"></i>My Activity</h3>
+        <div>
+            <div class="stat-row">
+                <span class="stat-label">Member since</span>
+                <span class="stat-value">{{ user.created_at.strftime('%B %d, %Y') if user.created_at else 'N/A' }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Last sign in</span>
+                <span class="stat-value">{{ user.last_login.strftime('%B %d, %Y · %I:%M %p') if user.last_login else 'N/A' }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Account status</span>
+                <span class="stat-value" style="color: var(--green-safe);">✅ Active</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Account type</span>
+                <span class="stat-value">{{ 'Seeded' if user.is_seeded else 'Self-registered' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 5: Change Password -->
+    <div class="profile-section">
+        <h3><i data-lucide="lock" style="width:16px; display:inline; margin-right:6px; color:var(--teal);"></i>Change Password</h3>
+        <form method="POST" action="{{ url_for('auth.change_password') }}">
+            <div class="row g-3">
+                <div class="col-12 position-relative">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Current Password</label>
+                    <input type="password" name="current_password" id="cp1" class="form-control ropias-input pe-5" required>
+                    <div class="toggle-pw position-absolute" data-t="cp1" style="right:14px; top:40px; cursor:pointer; color:var(--text-muted);"><i data-lucide="eye" style="width:16px;"></i></div>
+                </div>
+                <div class="col-12 position-relative">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">New Password</label>
+                    <input type="password" name="new_password" id="cp2" class="form-control ropias-input pe-5" required>
+                    <div class="toggle-pw position-absolute" data-t="cp2" style="right:14px; top:40px; cursor:pointer; color:var(--text-muted);"><i data-lucide="eye" style="width:16px;"></i></div>
+                </div>
+                <div class="col-12 position-relative">
+                    <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Confirm New Password</label>
+                    <input type="password" name="confirm_password" id="cp3" class="form-control ropias-input pe-5" required>
+                    <div class="toggle-pw position-absolute" data-t="cp3" style="right:14px; top:40px; cursor:pointer; color:var(--text-muted);"><i data-lucide="eye" style="width:16px;"></i></div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary d-flex gap-2 px-4 mt-3">
+                <i data-lucide="shield-check" style="width:16px;"></i> Update Password
+            </button>
+        </form>
     </div>
 
 </div>
+
+{% block scripts %}
+<script>
+// GPS
+function useGPS() {
+    const btn = document.getElementById('gpsProfileBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Detecting...';
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            document.getElementById('profileLat').value = pos.coords.latitude.toFixed(4);
+            document.getElementById('profileLon').value = pos.coords.longitude.toFixed(4);
+            btn.innerHTML = '<i data-lucide="check" style="width:16px;"></i> Location updated';
+            btn.style.color = 'var(--green-safe)'; btn.style.borderColor = 'var(--green-safe)';
+            lucide.createIcons();
+        },
+        () => { btn.innerHTML = '📍 GPS blocked. Enter manually.'; btn.style.color = 'var(--red-danger)'; }
+    , { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+// Password toggles
+document.querySelectorAll('.toggle-pw').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const inp = document.getElementById(btn.dataset.t);
+        const visible = inp.type === 'password';
+        inp.type = visible ? 'text' : 'password';
+        btn.innerHTML = `<i data-lucide="${visible ? 'eye-off' : 'eye'}" style="width:16px; color:${visible ? 'var(--teal)' : 'var(--text-muted)'};"></i>`;
+        lucide.createIcons();
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

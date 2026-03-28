@@ -126,20 +126,27 @@
                 <a href="{{ url_for('farmer.dashboard') }}" class="nav-link {% if request.endpoint == 'farmer.dashboard' %}active{% endif %}">
                     <i data-lucide="home" style="width: 18px;"></i> Dashboard
                 </a>
-                <a href="#" class="nav-link">
+                <a href="{{ url_for('farmer.history') }}" class="nav-link {% if request.endpoint == 'farmer.history' %}active{% endif %}">
                     <i data-lucide="bar-chart-2" style="width: 18px;"></i> My History
                 </a>
-                <a href="#" class="nav-link">
+                <a href="{{ url_for('farmer.crops') }}" class="nav-link {% if request.endpoint == 'farmer.crops' %}active{% endif %}">
                     <i data-lucide="book-open" style="width: 18px;"></i> Crop Reference
                 </a>
-                <a href="#" class="nav-link">
+                <a href="{{ url_for('farmer.profile') }}" class="nav-link {% if request.endpoint == 'farmer.profile' %}active{% endif %}">
                     <i data-lucide="user" style="width: 18px;"></i> My Profile
                 </a>
-                <a href="#" class="nav-link">
+                <a href="{{ url_for('farmer.settings') }}" class="nav-link {% if request.endpoint == 'farmer.settings' %}active{% endif %}">
                     <i data-lucide="settings" style="width: 18px;"></i> Settings
                 </a>
             </div>
 
+            <div class="border-top pt-2" style="border-color: var(--border)!important;">
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-logout"
+                   onclick="return confirm('Sign out of ROPIAS?')">
+                    <i data-lucide="log-out" style="width: 16px;"></i>
+                    Sign Out
+                </a>
+            </div>
             <div class="p-3 border-top" style="border-color: var(--border)!important;">
                 <div class="font-mono d-flex align-items-center gap-2 mb-1" style="font-size: 11px; color: var(--text-muted);">
                     <div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--green-safe);"></div> System Operational
@@ -147,7 +154,7 @@
                 <div class="font-mono" style="font-size: 11px; color: var(--text-muted);">NASA POWER: Sync'd</div>
             </div>
             <!-- Bottom padding for fixed position -->
-            <div style="height: 60px;"></div>
+            <div style="height: 20px;"></div>
         </aside>
 
         <!-- MAIN LAYOUT ROUTER -->
@@ -160,19 +167,24 @@
     <div class="d-md-none fixed-bottom border-top d-flex justify-content-around py-2" style="background-color: var(--bg-card); border-color: var(--border)!important; z-index: 900; padding-bottom: env(safe-area-inset-bottom);">
         <a href="{{ url_for('farmer.dashboard') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.dashboard' %}var(--teal){% else %}var(--text-muted){% endif %};">
             <i data-lucide="home" style="width: 20px;"></i>
-            <span class="font-mono fw-normal text-[0.65rem]">Home</span>
+            <span class="font-mono fw-normal" style="font-size:0.65rem;">Home</span>
         </a>
-        <a href="#" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: var(--text-muted);">
+        <a href="{{ url_for('farmer.history') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.history' %}var(--teal){% else %}var(--text-muted){% endif %};">
             <i data-lucide="bar-chart-2" style="width: 20px;"></i>
-            <span class="font-mono fw-normal text-[0.65rem]">History</span>
+            <span class="font-mono fw-normal" style="font-size:0.65rem;">History</span>
         </a>
-        <a href="#" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: var(--text-muted);">
+        <a href="{{ url_for('farmer.crops') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.crops' %}var(--teal){% else %}var(--text-muted){% endif %};">
             <i data-lucide="book-open" style="width: 20px;"></i>
-            <span class="font-mono fw-normal text-[0.65rem]">Crops</span>
+            <span class="font-mono fw-normal" style="font-size:0.65rem;">Crops</span>
         </a>
-        <a href="#" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: var(--text-muted);">
+        <a href="{{ url_for('farmer.profile') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.profile' %}var(--teal){% else %}var(--text-muted){% endif %};">
             <i data-lucide="user" style="width: 20px;"></i>
-            <span class="font-mono fw-normal text-[0.65rem]">Profile</span>
+            <span class="font-mono fw-normal" style="font-size:0.65rem;">Profile</span>
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: var(--red-danger);"
+           onclick="return confirm('Sign out of ROPIAS?')">
+            <i data-lucide="log-out" style="width: 20px;"></i>
+            <span class="font-mono fw-normal" style="font-size:0.65rem;">Sign Out</span>
         </a>
     </div>
 

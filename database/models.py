@@ -37,6 +37,18 @@ class User(UserMixin, db.Model):
     created_at       = db.Column(db.DateTime, default=datetime.utcnow)
     last_login       = db.Column(db.DateTime, nullable=True)
 
+    # Registration & Approval
+    status           = db.Column(db.String(20), default="pending")
+    approved_by      = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    approved_at      = db.Column(db.DateTime, nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)
+    region           = db.Column(db.String(80), nullable=True)
+
+    # Password Reset
+    reset_token      = db.Column(db.String(256), nullable=True)
+    reset_token_exp  = db.Column(db.DateTime, nullable=True)
+    reset_used       = db.Column(db.Boolean, default=False)
+
     # Farmer-specific fields
     farm_latitude    = db.Column(db.Float, nullable=True)
     farm_longitude   = db.Column(db.Float, nullable=True)

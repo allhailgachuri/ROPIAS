@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from flask import Flask, redirect, url_for
+from datetime import timedelta
 from flask_login import LoginManager, current_user
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -32,6 +33,12 @@ def create_app():
 
     # ── Configuration ─────────────────────────────────────────────────────────
     app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev-key-change-in-production")
+
+    # Session Security — sessions die when browser closes; remember-me limited to 1 day
+    app.config["SESSION_PERMANENT"] = False
+    app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=1)
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
 
     # Auto-select database
     database_url = os.getenv("DATABASE_URL", "sqlite:///database/ropias.db")

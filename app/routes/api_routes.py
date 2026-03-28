@@ -62,7 +62,8 @@ def analyze():
     onset = classify_onset(climate, crop_key=crop_key)
     irrigation = classify_soil_moisture(climate, rain_forecast, crop_key=crop_key)
 
-    # Save to QueryLog
+    # Save to QueryLog + enforce FIFO max 30
+    MAX_HISTORY = 30
     try:
         new_query = QueryLog(
             user_id = current_user.id if current_user.is_authenticated else None,
@@ -77,10 +78,22 @@ def analyze():
             data_end=climate["end_date"]
         )
         db.session.add(new_query)
+        db.session.flush()  # Get the ID without full commit
+
+        # FIFO rotation: prune oldest entries beyond MAX_HISTORY
+        if current_user.is_authenticated:
+            user_logs = QueryLog.query.filter_by(user_id=current_user.id)\
+                .order_by(QueryLog.created_at.asc()).all()
+            if len(user_logs) > MAX_HISTORY:
+                excess = len(user_logs) - MAX_HISTORY
+                for old_log in user_logs[:excess]:
+                    db.session.delete(old_log)
+
         db.session.commit()
     except Exception as e:
         print("Failed to save query to DB:", e)
         db.session.rollback()
+
 
     # Chart prep
     rain_14 = climate["precipitation"].tail(14)
@@ -151,6 +164,75 @@ def whatsapp_webhook():
     resp = MessagingResponse()
     resp.message(reply_text)
     return str(resp), 200, {"Content-Type": "text/xml"}
+
+
+from auth.auth import admin_required
+from flask_login import login_required
+
+@api_bp.route("/admin/activity-feed", methods=["GET"])
+@login_required
+@admin_required
+def activity_feed():
+    """Returns last 10 activity items as JSON for auto-refresh."""
+    # Note: Complex aggregations should normally happen at DB level but this is robust for small-scale
+    from database.models import AlertLog
+    queries = QueryLog.query.order_by(QueryLog.created_at.desc()).limit(10).all()
+    users = User.query.filter_by(role="farmer").order_by(User.created_at.desc()).limit(10).all()
+    alerts = AlertLog.query.order_by(AlertLog.sent_at.desc()).limit(10).all()
+    
+    feed = []
+    
+    for q in queries:
+        farmer_name = q.user.full_name if q.user else "Unknown Farmer"
+        feed.append({
+            "type": "query",
+            "icon": "🟢",
+            "text": f"{farmer_name} ran analysis · {q.crop_key or 'Crop'} · {round(q.latitude,2)}, {round(q.longitude,2)}",
+            "timestamp": q.created_at
+        })
+        
+    for u in users:
+        feed.append({
+            "type": "registration",
+            "icon": "✅",
+            "text": f"New registration: {u.full_name} · {u.preferred_crop or 'None'} · {u.region or 'Unknown'}",
+            "timestamp": u.created_at
+        })
+        
+    for a in alerts:
+        farmer_name = a.user.full_name if a.user else "Unknown Farmer"
+        prefix = "🔑" if "Welcome" in (a.content_summary or "") or "Password" in (a.content_summary or "") else "🌧️"
+        feed.append({
+            "type": "alert",
+            "icon": prefix,
+            "text": f"{farmer_name} received system alert via {a.channel}",
+            "timestamp": a.sent_at
+        })
+        
+    # Sort and take top 10 chronologically descending
+    feed.sort(key=lambda x: x["timestamp"], reverse=True)
+    feed = feed[:10]
+    
+    import math
+    from datetime import datetime
+    
+    # Format timeago natively
+    for item in feed:
+        diff = datetime.utcnow() - item["timestamp"]
+        mins = math.floor(diff.total_seconds() / 60)
+        if mins < 1:
+            time_str = "now"
+        elif mins < 60:
+            time_str = f"{mins}m ago"
+        elif mins < 1440:
+            time_str = f"{math.floor(mins/60)}hr ago"
+        else:
+            time_str = f"{math.floor(mins/1440)}d ago"
+            
+        item["time_ago"] = time_str
+        del item["timestamp"]
+        
+    return jsonify(feed)
 
 
 @api_bp.route("/health", methods=["GET"])

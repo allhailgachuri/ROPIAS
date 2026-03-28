@@ -1,455 +1,676 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid px-3 px-md-5 py-4" style="max-width: 1400px; margin: 0 auto;">
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px; margin: 0 auto;">
 
-    <!-- 1. GREETING BANNER -->
-    <div class="greeting-banner mb-4 d-flex align-items-center justify-content-between p-3 p-md-4 rounded-4 shadow-sm" style="background-color: var(--bg-card); border-left: 4px solid var(--teal);">
-        <div class="d-flex align-items-center gap-3">
-            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background-color: var(--navy); color: var(--white); font-weight: 600; font-size: 1.1rem;">
-                {{ current_user.full_name.split()[0][0]|upper }}{{ current_user.full_name.split()[1][0]|upper if current_user.full_name.split()|length > 1 else '' }}
-            </div>
-            <div>
-                <h2 class="font-display fst-italic m-0" style="color: var(--text-primary); font-size: var(--text-2xl);">Habari, {{ current_user.full_name.split(' ')[0] }}!</h2>
-                <p class="font-body m-0 mt-1" style="color: var(--text-muted); font-size: var(--text-sm);">Today's planting advisory for your farm.</p>
-            </div>
-        </div>
-        <div class="d-none d-md-flex align-items-center gap-3">
-            <div class="font-mono text-muted" style="font-size: 13px;" id="current-date-display"></div>
-        </div>
-    </div>
-
-    <!-- 2. INPUT PANEL -->
-    <div class="ropias-card p-4 mb-4">
-        <div class="font-body fw-bold mb-3 d-flex align-items-center gap-2" style="color: var(--text-primary);">
-            <i data-lucide="map-pin" class="w-4 h-4 text-[var(--teal)]"></i> Farm Control Panel
-        </div>
-        <form id="analyze-form" class="row g-3 align-items-end">
-            <div class="col-12 col-md-3">
-                <label class="form-label font-body fw-medium" style="font-size: 13px; color: var(--text-muted);">Latitude</label>
-                <input type="number" step="any" class="form-control ropias-input font-mono" id="latitude-input" value="{{ saved_lat }}" required>
-            </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label font-body fw-medium" style="font-size: 13px; color: var(--text-muted);">Longitude</label>
-                <input type="number" step="any" class="form-control ropias-input font-mono" id="longitude-input" value="{{ saved_lon }}" required>
-            </div>
-            <div class="col-12 col-md-2">
-                <button type="button" class="btn btn-ghost w-100 font-body text-sm d-flex gap-2 justify-content-center" onclick="useMyGPS()">
-                    <i data-lucide="crosshair" style="width:16px;"></i> Use GPS
-                </button>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label font-body fw-medium" style="font-size: 13px; color: var(--text-muted);">Target Crop</label>
-                <select class="form-select ropias-input font-body" id="crop-input">
-                    {% for category, crops in crops_by_category.items() %}
-                        <optgroup label="{{ category.replace('_', ' ').title() }}">
-                            {% for crop in crops %}
-                                <option value="{{ crop.id }}" {% if saved_crop == crop.id %}selected{% endif %}>{{ crop.emoji }} {{ crop.name }}</option>
-                            {% endfor %}
-                        </optgroup>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 mt-4">
-                <button type="submit" class="btn btn-primary w-100 d-flex justify-content-center gap-2" id="analyze-btn" style="height: 52px; font-size: 16px;">
-                    <span>Analyze My Farm</span> <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- UI STATE WRAPPER (Hidden until populated/loading) -->
-    <div id="results-wrapper" style="display: none;">
-
-        <!-- 3. ADVISORY HERO CARD -->
-        <div id="advisory-hero" class="ropias-card overflow-hidden mb-4 advisory-card" style="border-left-width: 6px;">
-            <!-- Rendered via JS -->
-        </div>
-
-        <!-- 4. STATS ROW -->
-        <div class="row g-3 mb-4" id="stats-row">
-            <!-- Max Rain -->
-            <div class="col-6 col-md-3">
-                <div class="ropias-card p-3 h-100">
-                    <div class="font-body text-uppercase fw-bold mb-2" style="font-size: var(--text-xs); color: var(--text-muted); letter-spacing: 0.5px;">Max Rain</div>
-                    <div class="font-display" style="font-size: var(--text-3xl); color: var(--text-primary);"><span id="stat-rain" class="count-up">0.0</span><span style="font-size: 1rem; color: var(--text-muted);"> mm</span></div>
-                    <div class="font-body mt-1 text-truncate" style="font-size: var(--text-sm); color: var(--text-secondary);">Last 48 hours</div>
-                </div>
-            </div>
-            <!-- Soil Moist -->
-            <div class="col-6 col-md-3">
-                <div class="ropias-card p-3 h-100" id="stat-card-soil">
-                    <div class="font-body text-uppercase fw-bold mb-2" style="font-size: var(--text-xs); color: var(--text-muted); letter-spacing: 0.5px;">Soil Moisture</div>
-                    <div class="font-display" style="font-size: var(--text-3xl); color: var(--text-primary);"><span id="stat-soil" class="count-up">0</span><span style="font-size: 1rem;">%</span></div>
-                    <div class="font-body mt-1 fw-bold" id="stat-soil-label" style="font-size: var(--text-sm);">Evaluating</div>
-                </div>
-            </div>
-            <!-- Trend -->
-            <div class="col-6 col-md-3">
-                <div class="ropias-card p-3 h-100">
-                    <div class="font-body text-uppercase fw-bold mb-2" style="font-size: var(--text-xs); color: var(--text-muted); letter-spacing: 0.5px;">Climate Trend</div>
-                    <div class="font-body fw-bold d-flex align-items-center gap-2" style="font-size: var(--text-2xl); color: var(--text-primary);" id="stat-trend-value">
-                        <i data-lucide="minus" class="w-6 h-6 text-muted"></i> Stable
-                    </div>
-                    <div class="font-body mt-1 text-truncate" style="font-size: var(--text-sm); color: var(--text-secondary);">Historical mean</div>
-                </div>
-            </div>
-            <!-- Crop -->
-            <div class="col-6 col-md-3">
-                <div class="ropias-card p-3 h-100">
-                    <div class="font-body text-uppercase fw-bold mb-2" style="font-size: var(--text-xs); color: var(--text-muted); letter-spacing: 0.5px;">Target Crop</div>
-                    <div class="font-display text-truncate" style="font-size: var(--text-2xl); color: var(--text-primary);" id="stat-crop-name">Maize</div>
-                    <div class="font-body mt-1 text-truncate" style="font-size: var(--text-sm); color: var(--text-secondary);" id="stat-crop-sub">Configuration active</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. IRRIGATION ADVISORY BANNER -->
-        <div id="irrigation-banner" class="ropias-card p-3 p-md-4 mb-4 d-flex flex-column flex-md-row gap-3 align-items-md-center justify-content-between" style="border-left-width: 5px;">
-            <div class="d-flex gap-3 align-items-start">
-                <i data-lucide="droplets" id="irr-icon" class="mt-1" style="width:24px; height:24px;"></i>
-                <div>
-                    <h4 class="font-body fw-bold m-0 mb-1" style="font-size: var(--text-lg); color: var(--text-primary);" id="irr-title">Irrigation Advisory</h4>
-                    <p class="font-body m-0" style="font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.5;" id="irr-desc">Analyzing root zone moisture...</p>
-                </div>
-            </div>
-            <div class="font-mono fw-bold px-3 py-2 rounded" id="irr-pill" style="font-size: 13px;">--%</div>
-        </div>
-
-        <!-- 6. CHARTS ROW -->
-        <div class="row g-4 mb-5">
-            <div class="col-12 col-md-6">
-                <div class="ropias-card p-4 h-100">
-                    <h5 class="font-body fw-bold mb-1" style="color: var(--text-primary); font-size: var(--text-base);">Rainfall History — Last 14 Days</h5>
-                    <div class="font-mono mb-4 text-muted" style="font-size: var(--text-xs);">PRECTOTCORR (mm/day) · NASA POWER</div>
-                    <div style="height: 250px; position: relative;">
-                        <!-- Custom CSS Skeleton for Charts -->
-                        <div id="rain-skeleton" class="position-absolute w-100 h-100 d-flex align-items-end gap-2 pb-4">
-                            <div class="w-100 skeleton rounded" style="height: 20%;"></div>
-                            <div class="w-100 skeleton rounded" style="height: 50%;"></div>
-                            <div class="w-100 skeleton rounded" style="height: 30%;"></div>
-                            <div class="w-100 skeleton rounded" style="height: 80%;"></div>
-                            <div class="w-100 skeleton rounded" style="height: 10%;"></div>
-                            <div class="w-100 skeleton rounded" style="height: 60%;"></div>
-                        </div>
-                        <canvas id="rainChart" style="display:none;"></canvas>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-12 col-md-6">
-                <div class="ropias-card p-4 h-100">
-                    <h5 class="font-body fw-bold mb-1" style="color: var(--text-primary); font-size: var(--text-base);">Root Zone Soil Moisture</h5>
-                    <div class="font-mono mb-4 text-muted" style="font-size: var(--text-xs);">GWETROOT (%) · NASA POWER</div>
-                    <div style="height: 250px; position: relative;">
-                         <div id="soil-skeleton" class="position-absolute w-100 h-100 d-flex align-items-center">
-                            <div class="w-100 skeleton rounded" style="height: 4px;"></div>
-                        </div>
-                        <canvas id="soilChart" style="display:none;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 7. 7-DAY FORECAST STRIP -->
-        <h5 class="font-body fw-bold mb-3" style="color: var(--text-primary); font-size: var(--text-lg);">7-Day Micro Forecast</h5>
-        <div class="d-flex gap-3 overflow-auto pb-3 mb-4" style="scroll-snap-type: x mandatory;">
-            <!-- Renders 7 skeletons via JS to satisfy specification -->
-            <div class="d-flex gap-3" id="forecast-track"></div>
-        </div>
-
-        <!-- 8. REPORT CARD -->
-        <div class="ropias-card p-4 p-md-5 mb-5">
-            <h4 class="font-body fw-bold mb-4 d-flex align-items-center gap-2" style="color: var(--text-primary);"><i data-lucide="clipboard-list" class="w-5 h-5 text-[var(--teal)]"></i> System Analysis Report</h4>
-            <hr style="border-color: var(--border);">
-            <div class="font-body" style="font-size: var(--text-base); color: var(--text-secondary); line-height: 1.8;" id="report-content">
-                <!-- Filled by JS -->
-            </div>
-            <div class="font-mono mt-4 mb-4" style="font-size: var(--text-xs); color: var(--text-muted);" id="report-meta"></div>
-            <hr style="border-color: var(--border);">
-            <p class="font-body fst-italic text-muted mt-3 mb-4 d-flex gap-2" style="font-size: var(--text-sm);">
-                <i data-lucide="alert-circle" class="w-4 h-4 mt-1"></i> Results use satellite data (0.5° resolution, 24–48hr latency). Use alongside local field observations.
+<!-- ─────────── GREETING BANNER ─────────── -->
+<div class="d-flex align-items-center justify-content-between mb-4 gap-3 p-3 p-md-4 rounded-4"
+     style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-subtle) 100%); border-left: 4px solid var(--teal); box-shadow: var(--shadow-sm);">
+    <div class="d-flex align-items-center gap-3">
+        <div class="avatar-circle large">{{ current_user.avatar_initials or 'FG' }}</div>
+        <div>
+            <h2 class="font-display fst-italic m-0" style="font-size: clamp(1.4rem, 3vw, 2rem); color: var(--text-primary);">
+                Habari, {{ current_user.full_name.split(' ')[0] }}!
+            </h2>
+            <p class="font-body m-0 mt-1" style="color: var(--text-muted); font-size: 13px;">
+                Today's planting advisory for your farm.
             </p>
-            <div class="d-flex flex-wrap gap-3">
-                <button class="btn btn-ghost"><i data-lucide="download" class="w-4 h-4 me-2"></i> Download Advisory</button>
-                <button class="btn btn-primary" onclick="window.open('https://wa.me/?text=ROPIAS%20Analysis%20Complete', '_blank')"><i data-lucide="share-2" class="w-4 h-4 me-2"></i> Share on WhatsApp</button>
+        </div>
+    </div>
+    <div class="d-none d-md-block font-mono text-end" style="font-size: 12px; color: var(--text-muted);">
+        <div id="live-date"></div>
+        <div class="mt-1 d-flex align-items-center justify-content-end gap-1">
+            <div style="width:6px; height:6px; border-radius:50%; background:var(--green-safe);"></div>
+            NASA POWER: Online
+        </div>
+    </div>
+</div>
+
+<!-- ─────────── INPUT PANEL ─────────── -->
+<div class="ropias-card p-3 p-md-4 mb-4">
+    <div class="font-body fw-bold mb-3 d-flex align-items-center gap-2" style="color: var(--text-primary); font-size: 15px;">
+        <i data-lucide="settings-2" style="width: 17px; color: var(--teal);"></i>
+        Farm Control Panel
+    </div>
+
+    <div class="row g-3">
+        <!-- LOCATION COLUMN -->
+        <div class="col-12 col-md-7">
+            <label class="form-label" style="font-size:12px; font-weight:500; color:var(--text-muted);">📍 FARM LOCATION</label>
+
+            <!-- 3-tab panel -->
+            <div class="location-tab-bar">
+                <button class="location-tab active" id="tabGps" onclick="switchLocTab('gps')">
+                    <i data-lucide="crosshair" style="width:12px; display:inline; margin-right:4px;"></i>GPS
+                </button>
+                <button class="location-tab" id="tabCoords" onclick="switchLocTab('coords')">
+                    <i data-lucide="hash" style="width:12px; display:inline; margin-right:4px;"></i>Coordinates
+                </button>
+                <button class="location-tab" id="tabCity" onclick="switchLocTab('city')">
+                    <i data-lucide="map" style="width:12px; display:inline; margin-right:4px;"></i>City/Town
+                </button>
             </div>
+
+            <!-- GPS TAB -->
+            <div class="location-tab-pane active" id="paneGps">
+                <button type="button" id="gpsBtn" onclick="detectGPS()"
+                        class="w-100 d-flex align-items-center justify-content-center gap-2"
+                        style="height:48px; background:var(--bg-input); border:1.5px solid var(--border); border-radius:var(--radius-md);
+                               font-family:var(--font-body); font-weight:500; font-size:14px; color:var(--text-primary); cursor:pointer; transition:0.2s;">
+                    <i data-lucide="crosshair" style="width:16px;"></i>
+                    Detect My Location
+                </button>
+                <div class="gps-result-row" id="gpsResult">
+                    <div class="gps-coords" id="gpsCoordText">—</div>
+                    <div class="gps-accuracy" id="gpsAccuracyText">—</div>
+                    <div class="gps-place" id="gpsPlaceText"></div>
+                </div>
+                <div class="gps-error-msg" id="gpsError">GPS denied or unavailable. Try Coordinates or City tab.</div>
+            </div>
+
+            <!-- COORDS TAB -->
+            <div class="location-tab-pane" id="paneCoords">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label" style="font-size:11px; color:var(--text-muted);">Latitude (°N)</label>
+                        <input type="number" step="any" id="latManual" class="form-control ropias-input font-mono" style="height:44px; font-size:13px;"
+                               placeholder="e.g. 0.2800" value="{{ saved_lat or '' }}" oninput="syncCoords()">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" style="font-size:11px; color:var(--text-muted);">Longitude (°E)</label>
+                        <input type="number" step="any" id="lonManual" class="form-control ropias-input font-mono" style="height:44px; font-size:13px;"
+                               placeholder="e.g. 34.7500" value="{{ saved_lon or '' }}" oninput="syncCoords()">
+                    </div>
+                </div>
+                <div id="coordsValidation" style="font-size:11px; font-family:var(--font-mono); margin-top:6px; color:var(--text-muted);"></div>
+            </div>
+
+            <!-- CITY TAB -->
+            <div class="location-tab-pane" id="paneCity">
+                <div class="location-search-wrapper">
+                    <input type="text" id="citySearch" class="form-control ropias-input" style="height:48px; font-size:14px;"
+                           placeholder="Search city or town in Kenya..." autocomplete="off" oninput="searchCities(this.value)" onfocus="searchCities(this.value)">
+                    <div class="location-dropdown" id="cityDropdown"></div>
+                </div>
+                <div id="citySelected" style="font-size:12px; font-family:var(--font-mono); color:var(--teal); margin-top:6px; display:none;"></div>
+            </div>
+
+            <!-- Hidden real inputs -->
+            <input type="hidden" id="latitude-input" value="{{ saved_lat or '' }}">
+            <input type="hidden" id="longitude-input" value="{{ saved_lon or '' }}">
         </div>
 
+        <!-- CROP COLUMN -->
+        <div class="col-12 col-md-5">
+            <label class="form-label" style="font-size:12px; font-weight:500; color:var(--text-muted);">🌱 TARGET CROP</label>
+            <input type="hidden" id="crop-input" value="{{ saved_crop or 'maize' }}">
+
+            <div class="crop-selector">
+                <div class="crop-selected" id="cropSelected" onclick="toggleCropDropdown()">
+                    <span id="cropEmoji" style="font-size:18px;">🌽</span>
+                    <span id="cropLabel" class="font-body" style="font-size:14px;">Maize (Mahindi)</span>
+                    <i data-lucide="chevron-down" class="chevron" style="width:16px;"></i>
+                </div>
+                <div class="crop-dropdown" id="cropDropdown">
+                    <div class="crop-filter-pills" id="cropFilterPills">
+                        <button class="pill active" onclick="filterCrops('all', this)">All</button>
+                        <button class="pill" onclick="filterCrops('cereals', this)">Cereals</button>
+                        <button class="pill" onclick="filterCrops('legumes', this)">Legumes</button>
+                        <button class="pill" onclick="filterCrops('vegetables', this)">Vegetables</button>
+                        <button class="pill" onclick="filterCrops('cash_crops', this)">Cash Crops</button>
+                        <button class="pill" onclick="filterCrops('root_tubers', this)">Roots</button>
+                        <button class="pill" onclick="filterCrops('fruits', this)">Fruits</button>
+                    </div>
+                    <div class="crop-search-wrapper">
+                        <input type="text" id="cropSearchInput" placeholder="Search crops..." oninput="filterCropsBySearch(this.value)">
+                    </div>
+                    <div class="crop-list" id="cropList">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Analyze button -->
+    <button id="analyze-btn" onclick="runAnalysis()"
+            class="btn btn-primary w-100 d-flex justify-content-center align-items-center gap-2 mt-3"
+            style="height: 54px; font-size: 16px; font-family: var(--font-body);">
+        <i data-lucide="zap" style="width:18px;"></i>
+        <span id="analyzeBtnText">Analyze My Farm</span>
+        <span class="spinner-border spinner-border-sm d-none" id="analyzeSpinner" style="width:16px; height:16px;"></span>
+    </button>
+</div>
+
+<!-- ─────────── SKELETON LOADER ─────────── -->
+<div id="resultsLoader" style="display:none;">
+    <div class="ropias-card p-4 mb-4">
+        <div class="skeleton w-50 mb-3" style="height:28px;"></div>
+        <div class="skeleton w-100 mb-2" style="height:16px;"></div>
+        <div class="skeleton w-75" style="height:16px;"></div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="skeleton" style="height:90px; border-radius:var(--radius-lg);"></div></div>
+        <div class="col-6 col-md-3"><div class="skeleton" style="height:90px; border-radius:var(--radius-lg);"></div></div>
+        <div class="col-6 col-md-3"><div class="skeleton" style="height:90px; border-radius:var(--radius-lg);"></div></div>
+        <div class="col-6 col-md-3"><div class="skeleton" style="height:90px; border-radius:var(--radius-lg);"></div></div>
+    </div>
+</div>
+
+<!-- ─────────── RESULT SUITE ─────────── -->
+<div id="results-wrapper" style="display:none;">
+
+    <!-- CARD 1: Onset Advisory -->
+    <div id="card-onset" class="result-card" style="opacity:0; transform:translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease;">
+        <div class="result-header">
+            <span class="result-icon" id="onset-icon">🌧️</span>
+            <span class="result-title" id="onset-title">Onset Advisory</span>
+            <span class="ml-badge" id="onset-badge">ML: —%</span>
+        </div>
+        <p class="result-body" id="onset-summary">—</p>
+        <div class="result-meta">
+            <span id="onset-date-meta">—</span>
+            <span id="onset-rain-meta">—</span>
+            <span id="onset-crop-meta">—</span>
+        </div>
+    </div>
+
+    <!-- CARD 2: Soil Moisture -->
+    <div id="card-moisture" class="result-card" style="opacity:0; transform:translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease;">
+        <div class="moisture-header">
+            <span style="font-size:1.3rem;">💧</span>
+            <span class="moisture-label">Soil Moisture</span>
+            <span class="moisture-value" id="moisture-value">—%</span>
+            <span class="moisture-status-badge" id="moisture-badge">—</span>
+        </div>
+        <div class="moisture-bar-wrapper">
+            <div class="moisture-trend">
+                Trend: <span class="trend-value" id="moisture-trend-text">—</span> &nbsp;·&nbsp; 7-day avg: <span class="trend-value" id="moisture-avg-text">—</span>
+            </div>
+            <div class="moisture-bar" id="moistureBar">
+                <div class="threshold-marker" id="wiltMarker" style="left:0%"><span>Wilt</span></div>
+                <div class="threshold-marker" id="fcMinMarker" style="left:0%"><span>FC Min</span></div>
+                <div class="threshold-marker" id="fcMaxMarker" style="left:0%"><span>FC Max</span></div>
+                <div class="moisture-fill" id="moistureFill" data-color="green" style="width:0%;"></div>
+            </div>
+            <div class="moisture-zones">
+                <span>Bone Dry 0%</span>
+                <span style="color:var(--red-danger);">← Wilt risk</span>
+                <span style="color:var(--green-safe);">Optimal →</span>
+                <span>Saturated 100%</span>
+            </div>
+        </div>
+        <div class="irrigation-advisory" id="irrigation-advisory">—</div>
+    </div>
+
+    <!-- CARD 3: 7-Day Risk Forecast -->
+    <div id="card-forecast" class="result-card" style="opacity:0; transform:translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease;">
+        <div class="d-flex align-items-baseline mb-1">
+            <span class="forecast-title">🔮 7-Day Crop Risk Forecast</span>
+            <span class="forecast-subtitle" id="forecast-source">· NASA POWER probabilistic</span>
+        </div>
+        <div class="forecast-strip" id="forecastStrip"><!-- rendered by JS --></div>
+        <div class="forecast-legend">
+            <span class="legend-item green">🟢 Low — Safe to plant</span>
+            <span class="legend-item amber">🟡 Medium — Delay if possible</span>
+            <span class="legend-item red">🔴 High — Do not plant</span>
+        </div>
+    </div>
+
+    <!-- CARD 4: 14-day Chart -->
+    <div id="card-chart" class="result-card chart-card" style="opacity:0; transform:translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease;">
+        <div class="chart-header d-flex align-items-center justify-content-between mb-2">
+            <span class="chart-title">📊 14-Day Climate History</span>
+            <span class="font-mono" style="font-size:10px; color:var(--text-muted);" id="chart-range">—</span>
+        </div>
+        <canvas id="dualChart" height="140"></canvas>
+        <p class="chart-disclaimer">↑ Bar = daily rainfall (mm) &nbsp;·&nbsp; Line = root soil moisture (%)</p>
+    </div>
+
+    <!-- CARD 5: Disclaimer -->
+    <div id="card-disclaimer" class="result-disclaimer" style="opacity:0; transition: opacity 0.5s ease;">
+        <span class="disclaimer-icon">ℹ️</span>
+        <span>This advisory is generated from NASA POWER satellite data and ML analysis. It is intended as a decision-support tool — final planting judgment should account for local conditions and extension officer guidance. ROPIAS does not guarantee crop outcomes.</span>
+    </div>
+</div>
 
 </div>
-{% endblock %}
+<!-- END container -->
 
 {% block scripts %}
 <script>
-    // Set Current Date in Banner
-    document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+// ── Kenya Cities Database ──────────────────────
+const KENYA_CITIES = [
+    {n:'Nairobi',r:'Nairobi',lat:-1.2921,lon:36.8219},{n:'Mombasa',r:'Coast',lat:-4.0435,lon:39.6682},
+    {n:'Kisumu',r:'Nyanza',lat:-0.0917,lon:34.7679},{n:'Nakuru',r:'Rift Valley',lat:-0.3031,lon:36.0800},
+    {n:'Eldoret',r:'Rift Valley',lat:0.5143,lon:35.2698},{n:'Thika',r:'Central',lat:-1.0332,lon:37.0693},
+    {n:'Malindi',r:'Coast',lat:-3.2175,lon:40.1169},{n:'Kitale',r:'Rift Valley',lat:1.0156,lon:35.0062},
+    {n:'Kakamega',r:'Western',lat:0.2827,lon:34.7519},{n:'Garissa',r:'North Eastern',lat:-0.4532,lon:39.6461},
+    {n:'Nyeri',r:'Central',lat:-0.4167,lon:36.9500},{n:'Meru',r:'Eastern',lat:0.0469,lon:37.6490},
+    {n:'Embu',r:'Eastern',lat:-0.5369,lon:37.4580},{n:'Machakos',r:'Eastern',lat:-1.5177,lon:37.2634},
+    {n:'Kisii',r:'Nyanza',lat:-0.6817,lon:34.7667},{n:'Kericho',r:'Rift Valley',lat:-0.3686,lon:35.2863},
+    {n:'Nanyuki',r:'Central',lat:0.0083,lon:37.0716},{n:'Migori',r:'Nyanza',lat:-1.0634,lon:34.4730},
+    {n:'Homa Bay',r:'Nyanza',lat:-0.5273,lon:34.4572},{n:'Voi',r:'Coast',lat:-3.3959,lon:38.5565},
+    {n:'Isiolo',r:'Eastern',lat:0.3536,lon:37.5820},{n:'Lamu',r:'Coast',lat:-2.2686,lon:40.9020},
+    {n:'Kajiado',r:'Rift Valley',lat:-1.8517,lon:36.7772},{n:'Naivasha',r:'Rift Valley',lat:-0.7167,lon:36.4333},
+    {n:'Kerugoya',r:'Central',lat:-0.4997,lon:37.2833},{n:'Murang\'a',r:'Central',lat:-0.7193,lon:37.1572},
+    {n:'Bungoma',r:'Western',lat:0.5636,lon:34.5606},{n:'Busia',r:'Western',lat:0.4606,lon:34.1114},
+    {n:'Trans Nzoia',r:'Rift Valley',lat:1.0333,lon:35.0000},{n:'Bomet',r:'Rift Valley',lat:-0.7820,lon:35.3409},
+    {n:'Siaya',r:'Nyanza',lat:0.0607,lon:34.2880},{n:'Vihiga',r:'Western',lat:0.0767,lon:34.7229},
+    {n:'Marsabit',r:'Eastern',lat:2.3284,lon:37.9934},{n:'Wajir',r:'North Eastern',lat:1.7471,lon:40.0573},
+    {n:'Mandera',r:'North Eastern',lat:3.9366,lon:41.8670},{n:'Lodwar',r:'North Western',lat:3.1190,lon:35.5977},
+    {n:'Hola',r:'Coast',lat:-1.5021,lon:40.0303},{n:'Moyale',r:'Eastern',lat:3.5210,lon:39.0582},
+    {n:'Kapenguria',r:'Rift Valley',lat:1.2386,lon:35.1108},{n:'Maralal',r:'Rift Valley',lat:1.0953,lon:36.6987},
+    {n:'Muranga',r:'Central',lat:-0.7193,lon:37.1572},{n:'Athi River',r:'Eastern',lat:-1.4561,lon:36.9755},
+    {n:'Limuru',r:'Central',lat:-1.1133,lon:36.6372},{n:'Kiambu',r:'Central',lat:-1.0282,lon:36.8360},
+    {n:'Ruiru',r:'Central',lat:-1.1456,lon:36.9609},{n:'Kitengela',r:'Rift Valley',lat:-1.4775,lon:36.9614},
+    {n:'Machakos Town',r:'Eastern',lat:-1.5177,lon:37.2634},{n:'Nandi',r:'Rift Valley',lat:0.1833,lon:35.1167},
+    {n:'Oyugis',r:'Nyanza',lat:-0.7190,lon:34.7266},{n:'Awendo',r:'Nyanza',lat:-0.9670,lon:34.4628},
+    {n:'Ahero',r:'Nyanza',lat:-0.1667,lon:34.9167},{n:'Mumias',r:'Western',lat:0.3327,lon:34.4876},
+    {n:'Webuye',r:'Western',lat:0.6108,lon:34.7705},{n:'Burnt Forest',r:'Rift Valley',lat:0.3600,lon:35.4700},
+    {n:'Eldama Ravine',r:'Rift Valley',lat:0.0497,lon:35.7218},{n:'Sotik',r:'Rift Valley',lat:-0.6719,lon:35.1194},
+    {n:'Migwani',r:'Eastern',lat:-0.9278,lon:38.0056},{n:'Makindu',r:'Eastern',lat:-2.2875,lon:37.8264},
+    {n:'Sultan Hamud',r:'Eastern',lat:-2.0450,lon:37.3608},{n:'Wundanyi',r:'Coast',lat:-3.3967,lon:38.3554},
+    {n:'Kwale',r:'Coast',lat:-4.1744,lon:39.4522},{n:'Kilifi',r:'Coast',lat:-3.6305,lon:39.8499},
+    {n:'Watamu',r:'Coast',lat:-3.3617,lon:40.0146},{n:'Shimba Hills',r:'Coast',lat:-4.2225,lon:39.3994}
+];
 
-    // Build the Forecast Skeleton Strip
-    const track = document.getElementById('forecast-track');
-    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    days.forEach(d => {
-        track.innerHTML += `
-        <div class="ropias-card p-3 text-center" style="min-width: 100px; scroll-snap-align: start; opacity: 0.6;">
-            <div class="font-mono fw-bold text-muted mb-2">${d}</div>
-            <div class="skeleton w-100 rounded mb-2" style="height:24px;"></div>
-            <div class="font-body text-muted" style="font-size:12px;">Data syncing</div>
-        </div>`;
+// ── All 37 Kenya Crops ─────────────────────────
+const KENYA_CROPS = {
+    cereals: [
+        {key:'maize',emoji:'🌽',name:'Maize',swahili:'Mahindi'},
+        {key:'wheat',emoji:'🌾',name:'Wheat',swahili:'Ngano'},
+        {key:'sorghum',emoji:'🌾',name:'Sorghum',swahili:'Mtama'},
+        {key:'millet',emoji:'🌾',name:'Millet',swahili:'Wimbi'},
+        {key:'rice',emoji:'🍚',name:'Rice',swahili:'Mchele'},
+        {key:'barley',emoji:'🌾',name:'Barley',swahili:'Shayiri'},
+    ],
+    legumes: [
+        {key:'beans',emoji:'🫘',name:'Common Beans',swahili:'Maharagwe'},
+        {key:'cowpea',emoji:'🫘',name:'Cowpea',swahili:'Kunde'},
+        {key:'soybean',emoji:'🫘',name:'Soybean',swahili:'Soya'},
+        {key:'groundnut',emoji:'🥜',name:'Groundnut',swahili:'Karanga'},
+        {key:'pigeon_pea',emoji:'🟡',name:'Pigeon Pea',swahili:'Ndengu'},
+        {key:'green_gram',emoji:'🟢',name:'Green Gram',swahili:'Ndengu Kijani'},
+    ],
+    vegetables: [
+        {key:'kale',emoji:'🥬',name:'Kale / Sukuma Wiki',swahili:'Sukuma Wiki'},
+        {key:'tomato',emoji:'🍅',name:'Tomato',swahili:'Nyanya'},
+        {key:'onion',emoji:'🧅',name:'Onion',swahili:'Vitunguu'},
+        {key:'cabbage',emoji:'🥦',name:'Cabbage',swahili:'Kabichi'},
+        {key:'spinach',emoji:'🥬',name:'Spinach',swahili:'Mchicha'},
+        {key:'eggplant',emoji:'🍆',name:'Eggplant',swahili:'Bilinganya'},
+        {key:'carrot',emoji:'🥕',name:'Carrot',swahili:'Karoti'},
+        {key:'pepper',emoji:'🌶️',name:'Pepper',swahili:'Pilipili'},
+    ],
+    cash_crops: [
+        {key:'tea',emoji:'🍵',name:'Tea',swahili:'Chai'},
+        {key:'coffee',emoji:'☕',name:'Coffee',swahili:'Kahawa'},
+        {key:'sugarcane',emoji:'🎋',name:'Sugarcane',swahili:'Miwa'},
+        {key:'cotton',emoji:'⚪',name:'Cotton',swahili:'Pamba'},
+        {key:'pyrethrum',emoji:'🌼',name:'Pyrethrum',swahili:'Parethramu'},
+        {key:'sunflower',emoji:'🌻',name:'Sunflower',swahili:'Alizeti'},
+        {key:'sisal',emoji:'🪴',name:'Sisal',swahili:'Katani'},
+        {key:'tobacco',emoji:'🌿',name:'Tobacco',swahili:'Tumbaku'},
+    ],
+    root_tubers: [
+        {key:'irish_potato',emoji:'🥔',name:'Irish Potato',swahili:'Viazi Mviringo'},
+        {key:'sweet_potato',emoji:'🍠',name:'Sweet Potato',swahili:'Viazi Vitamu'},
+        {key:'cassava',emoji:'🥔',name:'Cassava',swahili:'Muhogo'},
+        {key:'arrowroot',emoji:'🌿',name:'Arrowroot',swahili:'Nduma'},
+        {key:'yam',emoji:'🟤',name:'Yam',swahili:'Kizimba'},
+    ],
+    fruits: [
+        {key:'banana',emoji:'🍌',name:'Banana',swahili:'Ndizi'},
+        {key:'mango',emoji:'🥭',name:'Mango',swahili:'Embe'},
+        {key:'avocado',emoji:'🥑',name:'Avocado',swahili:'Parachichi'},
+        {key:'pawpaw',emoji:'🍈',name:'Pawpaw',swahili:'Papai'},
+        {key:'passion_fruit',emoji:'🟣',name:'Passion Fruit',swahili:'Matunda ya Pasipo'},
+    ],
+};
+
+// ── State ──────────────────────────────────────
+let selectedLat = parseFloat('{{ saved_lat or "0" }}') || null;
+let selectedLon = parseFloat('{{ saved_lon or "0" }}') || null;
+let selectedCrop = '{{ saved_crop or "maize" }}';
+let currentChart = null;
+
+// ── Date display ─────────────────────────────
+(function() {
+    const el = document.getElementById('live-date');
+    if(!el) return;
+    const now = new Date();
+    el.innerText = now.toLocaleDateString('en-KE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+})();
+
+// ── Location Tabs ─────────────────────────────
+function switchLocTab(tab) {
+    ['gps','coords','city'].forEach(t => {
+        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
+        document.getElementById('pane' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
     });
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    document.getElementById('pane' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    lucide.createIcons();
+}
 
-    let rainChartInstance = null;
-    let soilChartInstance = null;
+// ── GPS Detection ─────────────────────────────
+function detectGPS() {
+    const btn = document.getElementById('gpsBtn');
+    const result = document.getElementById('gpsResult');
+    const err = document.getElementById('gpsError');
+    err.style.display = 'none';
+    result.style.display = 'none';
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Detecting location...`;
+    btn.disabled = true;
 
-    // Handle Form Submission -> The Core Architecture 
-    document.getElementById('analyze-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const btn = document.getElementById('analyze-btn');
-        const wrapper = document.getElementById('results-wrapper');
-        const hero = document.getElementById('advisory-hero');
-        
-        // 1. Enter Loading State
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Fetching satellite data...`;
-        btn.disabled = true;
-        
-        wrapper.style.display = 'block';
-        
-        // Skeleton Hero
-        hero.style.borderLeftColor = 'var(--border)';
-        hero.style.background = 'var(--bg-card)';
-        hero.innerHTML = `
-            <div class="p-4 p-md-5">
-                <div class="skeleton w-50 mb-4" style="height: 36px;"></div>
-                <div class="skeleton w-75 mb-2" style="height: 20px;"></div>
-                <div class="skeleton w-100 mb-2" style="height: 20px;"></div>
-                <div class="skeleton w-50 mt-4" style="height: 14px;"></div>
-            </div>
-        `;
-
-        // Hide Charts for Skeleton
-        document.getElementById('rainChart').style.display = 'none';
-        document.getElementById('soilChart').style.display = 'none';
-        document.getElementById('rain-skeleton').style.display = 'flex';
-        document.getElementById('soil-skeleton').style.display = 'flex';
-
-        // 2. Fetch Data
-        try {
-            const payload = {
-                latitude: document.getElementById('latitude-input').value,
-                longitude: document.getElementById('longitude-input').value,
-                crop: document.getElementById('crop-input').value
-            };
-
-            const res = await fetch('/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-            
-            if(!res.ok) throw new Error(data.error || "API Failure");
-
-            // 3. Render Success State -> Hero Card
-            renderAdvisoryHero(data.onset);
-            
-            // Render Stats
-            document.getElementById('stat-rain').innerText = data.onset.precipitation_sum.toFixed(1);
-            document.getElementById('stat-soil').innerText = (data.irrigation.moisture_percent).toFixed(0);
-            document.getElementById('stat-crop-name').innerText = document.getElementById('crop-input').options[document.getElementById('crop-input').selectedIndex].text.replace(/🌽|🍅|🥔/g, '');
-            
-            const soilPct = data.irrigation.moisture_percent;
-            const soilCard = document.getElementById('stat-card-soil');
-            const soilLbl = document.getElementById('stat-soil-label');
-            if(soilPct < 30) { soilCard.style.backgroundColor = 'var(--red-light)'; soilLbl.style.color = 'var(--red-danger)'; soilLbl.innerText = 'Critical'; }
-            else if(soilPct > 70) { soilCard.style.backgroundColor = 'var(--blue-light)'; soilLbl.style.color = 'var(--blue-water)'; soilLbl.innerText = 'Saturated'; }
-            else { soilCard.style.backgroundColor = 'var(--green-light)'; soilLbl.style.color = 'var(--green-safe)'; soilLbl.innerText = 'Optimal'; }
-
-            // Render Irrigation Banner
-            renderIrrigationBanner(data.irrigation);
-
-            // Render Report Engine
-            document.getElementById('report-content').innerHTML = `
-                <b>Onset Evaluation:</b> A cumulative rainfall event spanning recent days resulted in ${data.onset.precipitation_sum}mm of precipitation. 
-                Dry spell filter protocol ${data.onset.dry_spell_detected ? 'tripped (imminent dry period detected).' : 'cleared (no extended dry periods detected).'} 
-                <br><b>Verdict: ${data.onset.result}.</b> 
-                <br><br>
-                <b>Soil Profile:</b> Current root zone volumetric water content is ${soilPct}%, classified as ${data.irrigation.status}.
-                <br><b>Agro-Advisory:</b> ${data.onset.advisory}
-            `;
-            document.getElementById('report-meta').innerHTML = `Coordinates: ${data.location.latitude}, ${data.location.longitude} &middot; Processed: ${new Date().toLocaleString()}`;
-
-            // Render Charts
-            renderCharts(data.chart);
-
-            // Trigger GSAP count up equivalents
-            window.triggerCountUps();
-            showToast("Analysis Complete: " + data.onset.result, "success");
-
-        } catch (err) {
-            hero.innerHTML = `
-                <div class="p-4 p-md-5" style="background: var(--red-light);">
-                    <h2 class="font-serif text-danger">Analysis Failed</h2>
-                    <p class="font-body">${err.message}</p>
-                </div>
-            `;
-            showToast(err.message, "error");
-        } finally {
-            btn.innerHTML = `<span>Analyze My Farm</span> <i data-lucide="arrow-right" class="w-5 h-5"></i>`;
-            btn.disabled = false;
+    if(!navigator.geolocation) {
+        err.innerText = 'Geolocation not supported. Use Coordinates tab.';
+        err.style.display = 'block'; btn.innerHTML = `<i data-lucide="crosshair" style="width:16px;"></i> GPS Unavailable`; btn.disabled = false; lucide.createIcons(); return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude, lon = pos.coords.longitude;
+            // Kenya bounds: -5 to 5°N, 34 to 42°E
+            if(lat < -5 || lat > 5 || lon < 34 || lon > 42) {
+                err.innerText = `⚠️ Location (${lat.toFixed(2)}°, ${lon.toFixed(2)}°) is outside Kenya. Please use coordinates or city tab.`;
+                err.style.display = 'block'; btn.innerHTML = `<i data-lucide="crosshair" style="width:16px;"></i> Detect My Location`; btn.disabled = false; lucide.createIcons(); return;
+            }
+            selectedLat = parseFloat(lat.toFixed(4));
+            selectedLon = parseFloat(lon.toFixed(4));
+            document.getElementById('latitude-input').value = selectedLat;
+            document.getElementById('longitude-input').value = selectedLon;
+            document.getElementById('gpsCoordText').innerText = `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`;
+            document.getElementById('gpsAccuracyText').innerText = `±${Math.round(pos.coords.accuracy)}m accuracy`;
+            result.style.display = 'flex';
+            btn.innerHTML = `<i data-lucide="check" style="width:16px;"></i> Location Detected`;
+            btn.style.borderColor = 'var(--green-safe)'; btn.style.color = 'var(--green-safe)'; btn.disabled = false;
+            // Reverse geocode
+            fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
+                .then(r => r.json()).then(d => {
+                    const place = d.address?.town || d.address?.city || d.address?.county || d.address?.state || '';
+                    if(place) { const p = document.getElementById('gpsPlaceText'); p.innerText = '📍 ' + place; p.style.display = 'block'; }
+                }).catch(()=>{});
             lucide.createIcons();
+        },
+        (e) => {
+            const msg = e.code === 1 ? 'Location permission denied. Enable GPS in browser settings.' : 'GPS signal lost. Try again or use Coordinates.';
+            err.innerText = msg; err.style.display = 'block';
+            btn.innerHTML = `<i data-lucide="crosshair" style="width:16px;"></i> Retry GPS`; btn.disabled = false; lucide.createIcons();
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+// ── Manual Coordinates Sync ─────────────────
+function syncCoords() {
+    const lat = parseFloat(document.getElementById('latManual').value);
+    const lon = parseFloat(document.getElementById('lonManual').value);
+    const val = document.getElementById('coordsValidation');
+    if(isNaN(lat) || isNaN(lon)) { val.innerText = ''; return; }
+    const inKenya = lat >= -5 && lat <= 5 && lon >= 34 && lon <= 42;
+    selectedLat = lat; selectedLon = lon;
+    document.getElementById('latitude-input').value = lat;
+    document.getElementById('longitude-input').value = lon;
+    val.innerText = inKenya ? `✅ Valid Kenya coordinates (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)` : `⚠️ Outside Kenya bounds — results may be inaccurate`;
+    val.style.color = inKenya ? 'var(--green-safe)' : 'var(--amber-watch)';
+}
+
+// ── City Search ───────────────────────────────
+function searchCities(query) {
+    const dd = document.getElementById('cityDropdown');
+    const q = query.toLowerCase().trim();
+    const filtered = q.length < 1 ? KENYA_CITIES.slice(0, 20) : KENYA_CITIES.filter(c => c.n.toLowerCase().includes(q) || c.r.toLowerCase().includes(q));
+    if(filtered.length === 0) {
+        dd.innerHTML = '<div class="location-no-result">No results for "' + query + '"</div>';
+        dd.style.display = 'block'; return;
+    }
+    dd.innerHTML = filtered.map(c =>
+        `<div class="location-option" onclick="selectCity('${c.n}',${c.lat},${c.lon})">
+            <span class="location-name">${c.n}</span><span class="location-region">${c.r}</span>
+            <span class="location-coords">${Math.abs(c.lat).toFixed(4)}°${c.lat<0?'S':'N'}, ${c.lon.toFixed(4)}°E</span>
+        </div>`
+    ).join('');
+    dd.style.display = 'block';
+}
+function selectCity(name, lat, lon) {
+    selectedLat = lat; selectedLon = lon;
+    document.getElementById('latitude-input').value = lat;
+    document.getElementById('longitude-input').value = lon;
+    document.getElementById('citySearch').value = name;
+    document.getElementById('cityDropdown').style.display = 'none';
+    const sel = document.getElementById('citySelected');
+    sel.innerText = `📍 ${name} · ${Math.abs(lat).toFixed(4)}°${lat<0?'S':'N'}, ${lon.toFixed(4)}°E`;
+    sel.style.display = 'block';
+}
+document.addEventListener('click', e => {
+    if(!e.target.closest('#paneCity')) document.getElementById('cityDropdown').style.display = 'none';
+});
+
+// ── Crop Dropdown ─────────────────────────────
+function buildCropList(filter = 'all', search = '') {
+    const list = document.getElementById('cropList');
+    list.innerHTML = '';
+    const s = search.toLowerCase();
+    Object.entries(KENYA_CROPS).forEach(([cat, crops]) => {
+        if(filter !== 'all' && filter !== cat) return;
+        const filtered = s ? crops.filter(c => c.name.toLowerCase().includes(s) || c.swahili.toLowerCase().includes(s)) : crops;
+        if(!filtered.length) return;
+        const label = document.createElement('div');
+        label.className = 'crop-group-label';
+        label.innerText = cat.replace('_',' ').toUpperCase();
+        list.appendChild(label);
+        filtered.forEach(crop => {
+            const opt = document.createElement('div');
+            opt.className = 'crop-option';
+            opt.innerHTML = `<span class="crop-emoji">${crop.emoji}</span><span class="crop-name">${crop.name}</span><span class="crop-swahili">${crop.swahili}</span>`;
+            opt.addEventListener('click', () => selectCrop(crop));
+            list.appendChild(opt);
+        });
+    });
+}
+function selectCrop(crop) {
+    selectedCrop = crop.key;
+    document.getElementById('crop-input').value = crop.key;
+    document.getElementById('cropEmoji').innerText = crop.emoji;
+    document.getElementById('cropLabel').innerText = `${crop.name} (${crop.swahili})`;
+    document.getElementById('cropDropdown').style.display = 'none';
+    document.getElementById('cropSelected').classList.remove('open');
+}
+function toggleCropDropdown() {
+    const dd = document.getElementById('cropDropdown');
+    const sel = document.getElementById('cropSelected');
+    const open = dd.style.display === 'block';
+    dd.style.display = open ? 'none' : 'block';
+    sel.classList.toggle('open', !open);
+    if(!open) { document.getElementById('cropSearchInput').focus(); buildCropList(); }
+}
+function filterCrops(cat, btn) {
+    document.querySelectorAll('#cropFilterPills .pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    buildCropList(cat, document.getElementById('cropSearchInput').value);
+}
+function filterCropsBySearch(q) { buildCropList('all', q); }
+document.addEventListener('click', e => { if(!e.target.closest('.crop-selector')) { document.getElementById('cropDropdown').style.display='none'; document.getElementById('cropSelected').classList.remove('open'); }});
+
+// Initialize crop dropdown with saved crop
+(function() {
+    buildCropList();
+    for(const [, crops] of Object.entries(KENYA_CROPS)) {
+        const found = crops.find(c => c.key === selectedCrop);
+        if(found) { document.getElementById('cropEmoji').innerText = found.emoji; document.getElementById('cropLabel').innerText = `${found.name} (${found.swahili})`; break; }
+    }
+})();
+
+// ── Run Analysis ─────────────────────────────
+async function runAnalysis() {
+    if(!selectedLat || !selectedLon) { alert('Please select a location first.'); return; }
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true;
+    document.getElementById('analyzeBtnText').innerText = 'Fetching NASA data...';
+    document.getElementById('analyzeSpinner').classList.remove('d-none');
+    document.getElementById('resultsLoader').style.display = 'block';
+    document.getElementById('results-wrapper').style.display = 'none';
+
+    try {
+        const resp = await fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: selectedLat, longitude: selectedLon, crop: selectedCrop })
+        });
+        const data = await resp.json();
+        if(resp.ok && data) {
+            document.getElementById('resultsLoader').style.display = 'none';
+            renderResults(data);
+        } else {
+            alert(data.error || 'Analysis failed. Try again.');
+        }
+    } catch(e) {
+        alert('Network error — could not reach the server. Make sure the server is running on http://127.0.0.1:5000');
+    }
+    btn.disabled = false;
+    document.getElementById('analyzeBtnText').innerText = 'Analyze My Farm';
+    document.getElementById('analyzeSpinner').classList.add('d-none');
+    document.getElementById('resultsLoader').style.display = 'none';
+}
+
+// ── Render Results ────────────────────────────
+function renderResults(data) {
+    const onset = data.onset || {};
+    const color = onset.color || 'none';
+    const colorMap = { true:'green', false:'red', uncertain:'amber', none:'' };
+    const classMap = { true:'onset-green', false:'onset-red', uncertain:'onset-amber', none:'' };
+    const iconMap  = { true:'✅', false:'🚫', uncertain:'⚠️', none:'ℹ️' };
+
+    const card1 = document.getElementById('card-onset');
+    card1.className = `result-card ${classMap[color] || ''}`;
+    document.getElementById('onset-icon').innerText = iconMap[color] || '🌧️';
+    document.getElementById('onset-title').innerText = onset.result || 'No Result';
+    document.getElementById('onset-summary').innerText = onset.summary || '—';
+    document.getElementById('onset-badge').innerText = onset.ml_metadata ? `ML: ${Math.round((onset.ml_metadata.confidence||0)*100)}%` : '—';
+    document.getElementById('onset-date-meta').innerText = onset.onset_date ? `📅 ${onset.onset_date}` : '';
+    document.getElementById('onset-rain-meta').innerText = onset.cumulative_rain ? `💧 ${onset.cumulative_rain}mm` : '';
+    document.getElementById('onset-crop-meta').innerText = onset.crop ? `🌱 ${onset.crop.display_name}` : '';
+
+    // Soil moisture card
+    const irr = data.irrigation || {};
+    const pct = irr.moisture_percent || 0;
+    document.getElementById('moisture-value').innerText = `${Math.round(pct)}%`;
+    const status = irr.status || 'Unknown';
+    const badge = document.getElementById('moisture-badge');
+    badge.innerText = status;
+    badge.style.background = pct < 20 ? 'var(--red-light)' : pct > 70 ? 'var(--blue-light)' : 'var(--green-light)';
+    badge.style.color = pct < 20 ? 'var(--red-danger)' : pct > 70 ? 'var(--blue-water)' : 'var(--green-safe)';
+    document.getElementById('moisture-trend-text').innerText = irr.trend || '—';
+    document.getElementById('moisture-avg-text').innerText = irr.avg_7day ? `${Math.round(irr.avg_7day)}%` : '—';
+    setTimeout(() => {
+        const fill = document.getElementById('moistureFill');
+        fill.style.width = Math.min(pct, 100) + '%';
+        fill.setAttribute('data-color', pct < 20 ? 'red' : pct > 70 ? 'blue' : 'green');
+        // Crop threshold markers
+        if(irr.crop_thresholds) {
+            const t = irr.crop_thresholds;
+            document.getElementById('wiltMarker').style.left = (t.wilting_point * 100) + '%';
+            document.getElementById('fcMinMarker').style.left = (t.field_capacity_min * 100) + '%';
+            document.getElementById('fcMaxMarker').style.left = (t.field_capacity_max * 100) + '%';
+        }
+    }, 100);
+    document.getElementById('irrigation-advisory').innerText = irr.advisory || irr.recommendation || irr.summary || '—';
+
+    // Forecast
+    renderForecast(data.forecast || []);
+
+    // Chart
+    renderDualChart(data.chart || {});
+
+    // Show all cards with stagger
+    const wrapper = document.getElementById('results-wrapper');
+    wrapper.style.display = 'block';
+    const cards = ['card-onset','card-moisture','card-forecast','card-chart','card-disclaimer'];
+    cards.forEach((id, i) => {
+        setTimeout(() => {
+            const el = document.getElementById(id);
+            if(el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }
+        }, 150 * (i + 1));
+    });
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderForecast(days) {
+    const strip = document.getElementById('forecastStrip');
+    if(!days.length) { strip.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">Forecast unavailable.</div>'; return; }
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    strip.innerHTML = days.slice(0,7).map((d, i) => {
+        const date = new Date(); date.setDate(date.getDate() + i + 1);
+        const risk = d.risk || 'low';
+        const val = d.rain_mm !== undefined ? `${Math.round(d.rain_mm)}mm` : `${Math.round((d.risk_score||0)*100)}%`;
+        return `<div class="forecast-day ${risk}">
+            <span class="day-label">${dayNames[date.getDay()]}</span>
+            <div class="risk-dot"></div>
+            <span class="risk-value">${val}</span>
+            <span class="risk-word">${risk.charAt(0).toUpperCase()+risk.slice(1)}</span>
+        </div>`;
+    }).join('');
+}
+
+function renderDualChart(chart) {
+    const ctx = document.getElementById('dualChart');
+    if(currentChart) { currentChart.destroy(); }
+    // API returns 'rainfall' and 'soil_moisture' keys
+    const labels = chart.labels || [];
+    const rain   = chart.rain_data   || chart.rainfall    || [];
+    const soil   = chart.soil_data   || chart.soil_moisture || [];
+    document.getElementById('chart-range').innerText = chart.range || `Last ${labels.length} days`;
+    const darkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(47,65,86,0.06)';
+    const textColor = darkMode ? '#5A7A8A' : '#7A91A0';
+    // Soil values may already be in % (0-100) or fraction (0-1)
+    const soilPct = soil.map(v => v === null ? null : (v > 1 ? v : v * 100));
+
+    currentChart = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                { type:'bar', label:'Rain (mm)', data: rain, backgroundColor:'rgba(86,124,141,0.55)', borderRadius: 4, yAxisID:'y1' },
+                { type:'line', label:'Soil Moisture (%)', data: soilPct, borderColor:'#2E7D52', backgroundColor:'rgba(46,125,82,0.08)', borderWidth:2, pointRadius:2, tension:0.4, fill:true, yAxisID:'y2' }
+            ]
+        },
+        options: {
+            responsive:true, interaction:{mode:'index', intersect:false},
+            plugins:{ legend:{ labels:{ font:{family:'JetBrains Mono'}, color:textColor, boxWidth:12, padding:16 }}},
+            scales:{
+                x:{ ticks:{ font:{family:'JetBrains Mono', size:9}, color:textColor }, grid:{color:gridColor }},
+                y1:{ position:'left', title:{display:true, text:'mm', font:{family:'JetBrains Mono', size:9}, color:textColor}, ticks:{font:{family:'JetBrains Mono', size:9}, color:textColor}, grid:{color:gridColor}},
+                y2:{ position:'right', min:0, max:100, title:{display:true, text:'%', font:{family:'JetBrains Mono', size:9}, color:textColor}, ticks:{font:{family:'JetBrains Mono', size:9}, color:textColor}, grid:{display:false}}
+            }
         }
     });
+}
 
-    function renderAdvisoryHero(onset) {
-        const hero = document.getElementById('advisory-hero');
-        let html = '';
-        
-        if(onset.result === 'TRUE_ONSET') {
-            hero.style.borderLeftColor = 'var(--green-safe)';
-            hero.style.background = 'linear-gradient(135deg, var(--green-light) 0%, var(--bg-card) 100%)';
-            html = `
-                <div class="p-4 p-md-5">
-                    <h2 class="font-display fst-italic mb-4" style="font-size: var(--text-3xl); color: var(--green-safe);">
-                        <i data-lucide="check-circle" class="w-8 h-8 me-2 pb-1" style="display:inline-block;"></i> TRUE ONSET
-                    </h2>
-                    <h3 class="font-body fw-bold mb-3" style="font-size: var(--text-lg); color: var(--text-primary);">SAFE TO PLANT THIS WEEK</h3>
-                    <p class="font-body mb-2" style="font-size: var(--text-base); color: var(--text-secondary);">${onset.precipitation_sum}mm of rainfall confirmed. No dry spell detected in the subsequent period. Soil conditions support successful germination.</p>
-                    <div class="font-mono mt-4" style="font-size: var(--text-sm); color: var(--text-muted); opacity:0.8;">Generated mathematically via NASA API.</div>
-                </div>
-            `;
-        } else if (onset.result === 'FALSE_ONSET') {
-            hero.style.borderLeftColor = 'var(--red-danger)';
-            hero.style.background = 'linear-gradient(135deg, var(--red-light) 0%, var(--bg-card) 100%)';
-            hero.style.boxShadow = '0 0 0 2px rgba(192,57,43,0.1)';
-            html = `
-                <div class="p-4 p-md-5">
-                    <h2 class="font-display fst-italic mb-4" style="font-size: var(--text-3xl); color: var(--red-danger);">
-                        <i data-lucide="alert-triangle" class="w-8 h-8 me-2 pb-1" style="display:inline-block;"></i> FALSE ONSET
-                    </h2>
-                    <h3 class="font-body fw-bold mb-3" style="font-size: var(--text-lg); color: var(--red-danger);">DO NOT PLANT — HIGH RISK OF SEED FAILURE</h3>
-                    <p class="font-body mb-2" style="font-size: var(--text-base); color: var(--text-secondary);">Rainfall detected, but a severe dry spell follows. Seeds planted now will incur extreme water stress.</p>
-                    <div class="font-mono mt-4" style="font-size: var(--text-sm); color: var(--text-muted); opacity:0.8;">Action: Wait for the next confirmed onset event.</div>
-                </div>
-            `;
-        } else {
-            hero.style.borderLeftColor = 'var(--amber-watch)';
-            hero.style.background = 'var(--bg-card)';
-            html = `
-                <div class="p-4 p-md-5">
-                    <h2 class="font-display fst-italic mb-4" style="font-size: var(--text-3xl); color: var(--amber-watch);">
-                        <i data-lucide="clock" class="w-8 h-8 me-2 pb-1" style="display:inline-block;"></i> NO ONSET DETECTED
-                    </h2>
-                    <p class="font-body mb-2" style="font-size: var(--text-base); color: var(--text-secondary);">Cumulative rainfall has not yet bridged the critical threshold required for sustained crop growth.</p>
-                </div>
-            `;
-        }
-        hero.innerHTML = html;
-        lucide.createIcons();
-    }
-
-    function renderIrrigationBanner(irr) {
-        const ban = document.getElementById('irrigation-banner');
-        const icon = document.getElementById('irr-icon');
-        const title = document.getElementById('irr-title');
-        const pill = document.getElementById('irr-pill');
-        const desc = document.getElementById('irr-desc');
-
-        pill.innerText = `${irr.moisture_percent}%`;
-
-        if(irr.status === 'Irrigate') {
-            ban.style.borderLeftColor = 'var(--blue-water)';
-            ban.style.backgroundColor = 'var(--blue-light)';
-            icon.style.color = 'var(--blue-water)';
-            title.style.color = 'var(--blue-water)';
-            pill.style.backgroundColor = 'var(--blue-water)'; pill.style.color = '#fff';
-            desc.innerText = "Soil moisture is critically low. Immediate irrigation required to prevent wilting.";
-        } else if (irr.status === 'Optimal') {
-            ban.style.borderLeftColor = 'var(--green-safe)';
-            ban.style.backgroundColor = 'var(--green-light)';
-            icon.style.color = 'var(--green-safe)';
-            title.style.color = 'var(--green-safe)';
-            pill.style.backgroundColor = 'var(--green-safe)'; pill.style.color = '#fff';
-            desc.innerText = "No irrigation needed. Root zone moisture is exactly within the healthy bracket.";
-        } else {
-            ban.style.borderLeftColor = 'var(--amber-watch)';
-            ban.style.backgroundColor = 'var(--amber-light)';
-            icon.style.color = 'var(--amber-watch)';
-            title.style.color = 'var(--amber-watch)';
-            pill.style.backgroundColor = 'var(--amber-watch)'; pill.style.color = '#fff';
-            desc.innerText = "Soil is heavily saturated. Withhold irrigation to prevent root rot.";
+// Auto-run from URL params (re-run from history)
+(function() {
+    const p = new URLSearchParams(window.location.search);
+    const lat = p.get('lat'), lon = p.get('lon'), crop = p.get('crop');
+    if(lat && lon) {
+        selectedLat = parseFloat(lat); selectedLon = parseFloat(lon);
+        document.getElementById('latitude-input').value = lat;
+        document.getElementById('longitude-input').value = lon;
+        switchLocTab('coords');
+        document.getElementById('latManual').value = lat;
+        document.getElementById('lonManual').value = lon;
+        syncCoords();
+        if(crop) {
+            selectedCrop = crop;
+            document.getElementById('crop-input').value = crop;
+            for(const [, crops] of Object.entries(KENYA_CROPS)) {
+                const f = crops.find(c => c.key === crop);
+                if(f) { document.getElementById('cropEmoji').innerText = f.emoji; document.getElementById('cropLabel').innerText = `${f.name} (${f.swahili})`; break; }
+            }
         }
     }
+})();
 
-    function renderCharts(cData) {
-        document.getElementById('rain-skeleton').style.display = 'none';
-        document.getElementById('soil-skeleton').style.display = 'none';
-        
-        const canvasRain = document.getElementById('rainChart');
-        const canvasSoil = document.getElementById('soilChart');
-        canvasRain.style.display = 'block';
-        canvasSoil.style.display = 'block';
-
-        const rootStyle = getComputedStyle(document.body);
-        const gridColor = rootStyle.getPropertyValue('--border').trim() || 'rgba(0,0,0,0.1)';
-        const textColor = rootStyle.getPropertyValue('--text-muted').trim() || '#666';
-
-        if(rainChartInstance) rainChartInstance.destroy();
-        if(soilChartInstance) soilChartInstance.destroy();
-
-        // Rainfall Bar
-        rainChartInstance = new Chart(canvasRain, {
-            type: 'bar',
-            data: {
-                labels: cData.labels,
-                datasets: [{
-                    label: 'Precipitation (mm)',
-                    data: cData.rainfall,
-                    backgroundColor: cData.rainfall.map(v => v > 20 ? 'rgba(46,125,82, 0.8)' : '#2F4156'),
-                    borderRadius: { topLeft: 4, topRight: 4 }
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                animation: { duration: 1000, easing: 'easeOutQuart' },
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } } },
-                    y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } } }
-                }
-            }
-        });
-
-        // Soil Moisture Line
-        soilChartInstance = new Chart(canvasSoil, {
-            type: 'line',
-            data: {
-                labels: cData.labels,
-                datasets: [{
-                    label: 'GWETROOT (%)',
-                    data: cData.soil_moisture,
-                    borderColor: '#567C8D',
-                    backgroundColor: 'rgba(86,124,141,0.1)',
-                    borderWidth: 2.5,
-                    pointBackgroundColor: '#FFFFFF',
-                    pointBorderColor: '#567C8D',
-                    pointRadius: 4,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                animation: { duration: 1200, easing: 'easeOutQuart' },
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } } },
-                    y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } } }
-                }
-            }
-        });
-    }
-
+lucide.createIcons();
 </script>
+{% endblock %}
 {% endblock %}

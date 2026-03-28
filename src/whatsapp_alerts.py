@@ -158,6 +158,71 @@ def send_daily_digest(phone, farmer_name, crop_name,
     return send_message(phone, body)
 
 
+def send_password_reset(phone: str, name: str, reset_url: str) -> dict:
+    """Sends a WhatsApp password reset link to the user."""
+    body = (
+        f"🔐 *ROPIAS Password Reset*\n\n"
+        f"Hello {name},\n\n"
+        f"Someone requested a password reset for your ROPIAS account.\n\n"
+        f"Reset your password:\n{reset_url}\n\n"
+        f"⏱️ This link expires in 1 hour.\n\n"
+        f"If you didn't request this, ignore this message — "
+        f"your account is safe.\n\n"
+        f"— ROPIAS System"
+    )
+    return send_message(phone, body)
+
+
+def send_new_registration_alert(
+    admin_phone: str,
+    admin_name: str,
+    farmer_name: str,
+    farmer_email: str,
+    farmer_phone: str,
+    farmer_crop: str,
+    farmer_region: str,
+    farmer_lat: float,
+    farmer_lon: float
+) -> dict:
+    """
+    Notifies an admin when a new farmer registers and needs approval.
+    Sent to all admin users immediately on registration.
+    """
+    body = (
+        f"👤 *New ROPIAS Registration*\n\n"
+        f"Hello {admin_name},\n\n"
+        f"A new farmer has registered and needs your approval:\n\n"
+        f"*Name:* {farmer_name}\n"
+        f"*Email:* {farmer_email}\n"
+        f"*Phone:* {farmer_phone}\n"
+        f"*Crop:* {farmer_crop}\n"
+        f"*Region:* {farmer_region}\n"
+        f"*Coordinates:* {farmer_lat}°N, {farmer_lon}°E\n\n"
+        f"Approve or reject this account in the officer dashboard:\n"
+        f"https://ropias.app/officer/farmers/pending\n\n"
+        f"— ROPIAS System"
+    )
+    return send_message(admin_phone, body)
+
+
+def send_approval_notification(phone: str, name: str) -> dict:
+    """Notifies a farmer their account has been approved."""
+    body = (
+        f"✅ *ROPIAS Account Approved!*\n\n"
+        f"Great news, {name}!\n\n"
+        f"Your ROPIAS account has been approved by an extension officer.\n\n"
+        f"You can now sign in and get your daily planting advisory:\n"
+        f"https://ropias.app/auth/login\n\n"
+        f"*Your first steps:*\n"
+        f"1. Sign in with your email and password\n"
+        f"2. Confirm your farm coordinates\n"
+        f"3. Select your crop\n"
+        f"4. Get your first advisory!\n\n"
+        f"— ROPIAS | KCA University"
+    )
+    return send_message(phone, body)
+
+
 def handle_incoming(from_number: str, body: str, db=None, User=None,
                     FarmFeedback=None) -> str:
     """

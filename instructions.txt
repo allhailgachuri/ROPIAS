@@ -1,0 +1,123 @@
+======================================================
+ROPIAS - System Navigation & Startup Instructions
+======================================================
+
+1. HOW TO START THE PROJECT LOCALLY (GIT BASH)
+------------------------------------------------------
+To run the server effectively on Windows using Git Bash:
+
+Step 1: Activate the Virtual Environment
+    source venv/Scripts/activate
+    (or: source .venv/Scripts/activate)
+    * Note: You will see `(venv)` appear on your terminal line when successful.
+
+Step 2: Install Required Dependencies
+    pip install -r requirements.txt
+    pip install flask-login psycopg2-binary twilio apscheduler itsdangerous
+
+Step 3: Run the Application
+    python run.py
+
+Step 4: View in Browser
+    Once the server starts, open your web browser and go to:
+    http://127.0.0.1:5000
+
+Step 5: Stopping the Server
+    Press `Ctrl + C` in your terminal to shut down the Flask application.
+
+
+2. SEEDED USER CREDENTIALS (LOGIN ACCOUNTS)
+------------------------------------------------------
+These accounts are pre-loaded into the database on first startup.
+Use these to test the system locally.
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  👩‍💼 ADMIN / EXTENSION OFFICER — Rebecca Chege          │
+  │  Email:    rebeccachegee@gmail.com                      │
+  │  Password: RainySeasonKenya@2024                        │
+  │  Role:     Admin (Extension Officer Dashboard)          │
+  │  Access:   /officer/dashboard — manages all farmers     │
+  ├─────────────────────────────────────────────────────────┤
+  │  👨‍💼 ADMIN / EXTENSION OFFICER — Rushion Chege           │
+  │  Email:    rushionchegge@gmail.com                      │
+  │  Password: NasaPower@Ropias2024                         │
+  │  Role:     Admin (Extension Officer Dashboard)          │
+  │  Access:   /officer/dashboard — manages all farmers     │
+  ├─────────────────────────────────────────────────────────┤
+  │  👨‍🌾 FARMER — Francis Gachuri                            │
+  │  Email:    francisgchegge@gmail.com                     │
+  │  Password: Farmer@Kakamega2024                          │
+  │  Role:     Farmer (Main Dashboard)                      │
+  │  Farm:     Kakamega (0.28°N, 34.75°E)                  │
+  │  Crop:     Maize (Mahindi)                              │
+  │  Access:   /farmer/dashboard                            │
+  └─────────────────────────────────────────────────────────┘
+
+NOTE: Seeded accounts bypass the "pending approval" requirement.
+New self-registered farmers must be approved by an admin first.
+
+
+3. AUTH FLOW
+------------------------------------------------------
+Landing Page (/) → Get Started → Register Page (Sign Up)
+  ↓ Already have an account? Switch to Sign In tab
+  ↓ Login successful → Role-based redirect:
+    Admin → /officer/dashboard
+    Farmer → /farmer/dashboard
+
+New farmer registration creates a "pending" account.
+The admin receives a WhatsApp alert and approves via:
+  /officer/pending-farmers
+
+Sign Out → Returns to Landing Page (/)
+
+
+4. HOW TO RESET THE DATABASE (FRESH START)
+------------------------------------------------------
+If schema changes were made, delete the old database and let Flask recreate it:
+
+    rm -f ~/.ropias/database/ropias.db
+    python run.py
+
+The app auto-seeds the 3 default users on first startup.
+
+
+5. HOW TO NAVIGATE THE PROJECT STRUCTURE
+------------------------------------------------------
+/app
+    - /static:    CSS, JavaScript, images
+    - /templates: All HTML templates (dashboards, auth pages, etc.)
+    - app.py:     Flask Application Factory — create_app()
+    - /routes:    farmer_routes.py, officer_routes.py, api_routes.py
+
+/auth
+    - routes.py:  Login, logout, register, forgot/reset password
+    - auth.py:    Login decorators (farmer_required, admin_required)
+
+/database
+    - models.py:  SQLAlchemy ORM models (User, QueryLog, AlertLog...)
+    - seed.py:    Seeds the 3 foundational users on first boot
+
+/src
+    - data_fetcher.py:    NASA POWER API client
+    - onset_engine.py:    True/False onset classification
+    - irrigation_engine.py: Soil moisture + irrigation advisory
+    - crop_registry.py:   All 37 Kenya crop thresholds
+    - whatsapp_alerts.py: Twilio WhatsApp messaging
+
+.env
+    - Private Environment Variables (Twilio, NASA, Flask keys)
+    - NEVER commit this file to version control
+
+run.py
+    - Entry point. Run this to start the server.
+
+
+6. DEVELOPER TIPS
+------------------------------------------------------
+- Always activate venv before running: source venv/Scripts/activate
+- Restart the server after editing .env variables
+- Theme engine (Light/Dark/System) is pure front-end CSS/JS — no backend needed
+- Sessions expire when browser closes (SESSION_PERMANENT = False)
+- Remember-me cookies last 1 day maximum
+======================================================

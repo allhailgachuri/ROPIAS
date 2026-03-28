@@ -1,0 +1,350 @@
+{% extends "auth/auth_base.html" %}
+
+{% block content %}
+<!-- Tab Switcher -->
+<div class="auth-tab-switcher mb-4" id="authTabSwitcher">
+    <button class="auth-tab active" id="tabRegister" onclick="switchTab('register')">
+        <span>New Account</span>
+    </button>
+    <button class="auth-tab" id="tabLogin" onclick="switchTab('login')">
+        <span>Sign In</span>
+    </button>
+</div>
+
+<!-- REGISTER PANEL -->
+<div id="panelRegister">
+    <!-- SVG for checkmark -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+      <symbol id="icon-success" viewBox="0 0 52 52">
+        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none" stroke="var(--green-safe)" stroke-width="2"/>
+        <path class="checkmark-tick" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" stroke="var(--green-safe)" stroke-width="2"/>
+      </symbol>
+    </svg>
+
+    <div id="registrationFlow">
+        <!-- HEADER & PROGRESS -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 id="stepTitle" style="font-family: var(--font-body); font-size: 1.4rem; font-weight: 600; color: var(--text-primary); margin: 0;">Create your account</h2>
+                <span id="stepCounter" style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.8rem;">Step 1 of 3</span>
+            </div>
+            <p id="stepSub" style="font-family: var(--font-body); color: var(--text-muted); font-size: 0.9rem; margin: 0;">Join Kenya's farmers on ROPIAS</p>
+        </div>
+
+        <div class="d-flex align-items-center mb-4" style="position:relative;">
+            <div style="height:2px; background:var(--border); width:100%; position:absolute; top:50%; transform:translateY(-50%); z-index:0;"></div>
+            <div id="progressBar" style="height:2px; background:var(--teal); width:0%; position:absolute; top:50%; transform:translateY(-50%); z-index:1; transition:0.4s ease;"></div>
+            <div class="d-flex justify-content-between w-100" style="position:relative; z-index:2;">
+                <div class="step-dot" id="dot1" style="width:10px; height:10px; border-radius:50%; background:var(--navy); border:2px solid var(--bg-card);"></div>
+                <div class="step-dot" id="dot2" style="width:10px; height:10px; border-radius:50%; background:var(--border); border:2px solid var(--bg-card);"></div>
+                <div class="step-dot" id="dot3" style="width:10px; height:10px; border-radius:50%; background:var(--border); border:2px solid var(--bg-card);"></div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}
+                <div class="flash-message alert-{{ category }} mb-3"><span>{{ message }}</span></div>
+            {% endfor %}{% endif %}
+        {% endwith %}
+
+        <form id="regForm" method="POST" action="{{ url_for('auth.register') }}">
+            <!-- STEP 1 -->
+            <div id="step1" class="step-pane">
+                <div class="mb-3">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Full Name</label>
+                    <input type="text" name="full_name" id="nameInput" class="auth-input" placeholder="Francis Gachuri" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Email Address</label>
+                    <input type="email" name="email" id="emailInput" class="auth-input" placeholder="you@example.com" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">WhatsApp Phone Number</label>
+                    <input type="text" name="phone" id="phoneInput" class="auth-input" placeholder="+254 7XX XXX XXX" required>
+                    <div class="mt-1 d-flex gap-2 align-items-center" style="color:var(--text-muted); font-size:0.75rem;">
+                        <i data-lucide="info" style="width:12px;"></i> You'll receive your daily advisory here
+                    </div>
+                </div>
+                <button type="button" class="btn-auth mt-1" onclick="nextStep(2)">Next: Your Farm &rarr;</button>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="step2" class="step-pane d-none">
+                <div class="mb-3">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Farm GPS Coordinates</label>
+                    <div class="d-flex gap-2 mb-2">
+                        <input type="number" step="any" name="latitude" id="latInput" class="auth-input" placeholder="Latitude (e.g. 0.28)">
+                        <input type="number" step="any" name="longitude" id="lonInput" class="auth-input" placeholder="Longitude (e.g. 34.75)">
+                    </div>
+                    <button type="button" class="w-100 d-flex justify-content-center align-items-center gap-2 mb-2" id="regGpsBtn" style="height:44px; background:var(--bg-input); color:var(--text-primary); border:1.5px solid var(--border); border-radius:10px; font-weight:500; font-size:0.875rem; cursor:pointer;">
+                        <i data-lucide="map-pin" style="width:15px;"></i> Detect My Location Automatically
+                    </button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Primary Crop</label>
+                    <select name="crop" class="auth-input" style="appearance:none;">
+                        <option value="maize">🌽 Maize (Mahindi)</option>
+                        <option value="beans">🫘 Beans (Maharagwe)</option>
+                        <option value="tomato">🍅 Tomatoes (Nyanya)</option>
+                        <option value="irish_potato">🥔 Potatoes (Viazi)</option>
+                        <option value="kale">🥬 Sukuma Wiki</option>
+                        <option value="tea">🍵 Tea (Chai)</option>
+                        <option value="coffee">☕ Coffee (Kahawa)</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Region</label>
+                    <select name="region" class="auth-input" style="appearance:none;">
+                        <option value="Western Kenya">Western Kenya</option>
+                        <option value="Rift Valley">Rift Valley</option>
+                        <option value="Central Kenya">Central Kenya</option>
+                        <option value="Eastern Kenya">Eastern Kenya</option>
+                        <option value="Nyanza">Nyanza</option>
+                        <option value="Coast">Coast</option>
+                    </select>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn-auth" style="background:transparent; color:var(--text-primary); border:1.5px solid var(--border); z-index:0; flex:0 0 80px;" onclick="nextStep(1)">&larr;</button>
+                    <button type="button" class="btn-auth" onclick="nextStep(3)">Next: Security &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="step3" class="step-pane d-none">
+                <div class="mb-3 position-relative">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Create Password</label>
+                    <input type="password" name="password" id="regPass" class="auth-input pe-5" required>
+                    <div class="position-absolute toggle-pass" data-target="regPass" style="right: 16px; top: 40px; color: var(--text-muted); cursor: pointer;">
+                        <i data-lucide="eye" style="width:17px;"></i>
+                    </div>
+                    <div class="mt-2 d-flex align-items-center gap-2">
+                        <div style="flex:1; height:5px; background:var(--border); border-radius:999px; overflow:hidden;">
+                            <div id="strengthBar" style="height:100%; width:0%; transition:0.3s; background:var(--red-danger);"></div>
+                        </div>
+                        <span id="strengthText" style="font-size:0.72rem; color:var(--text-muted); font-weight:500; min-width:60px;">Weak</span>
+                    </div>
+                </div>
+                <div class="mb-4 position-relative">
+                    <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color:var(--text-primary);">Confirm Password</label>
+                    <input type="password" id="regConfirm" class="auth-input pe-5" required>
+                    <div class="position-absolute" id="matchIcon" style="right: 16px; top: 40px; display:none;"></div>
+                </div>
+                <div class="mb-4 d-flex align-items-start gap-2">
+                    <input type="checkbox" id="consentCheck" class="custom-checkbox flex-shrink-0" style="margin-top:3px;" required>
+                    <label for="consentCheck" style="font-size: 0.78rem; color: var(--text-secondary); cursor:pointer; line-height: 1.4;">
+                        I agree that ROPIAS may use my farm data to provide advisories and improve ML predictions.
+                    </label>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn-auth" style="background:transparent; color:var(--text-primary); border:1.5px solid var(--border); z-index:0; flex:0 0 80px;" onclick="nextStep(2)">&larr;</button>
+                    <button type="submit" class="btn-auth" id="finalSubmitBtn" disabled>Create Account &rarr;</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div id="successPanel" class="d-none text-center w-100">
+        <div style="width:60px; height:60px; margin:0 auto 16px;"><svg style="width:100%; height:100%;"><use href="#icon-success"></use></svg></div>
+        <h2 style="font-family: var(--font-display); font-size: 1.75rem; color: var(--text-primary); margin-bottom: 0.5rem;">Account created!</h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">Welcome, <span id="successName" class="fw-bold"></span>.</p>
+        <div style="background: var(--bg-input); padding: 18px; border-radius: 10px; margin-bottom: 1.5rem; text-align: left;">
+            <p style="font-size:0.9rem; color:var(--text-primary); margin-bottom:0.75rem;">Your account is <strong style="color:var(--amber-watch);">pending approval</strong> by an extension officer.</p>
+            <p style="font-size:0.9rem; color:var(--text-primary); margin:0;">We'll message <span id="successPhone" style="color:var(--teal); font-weight:600; font-family:var(--font-mono);"></span> on WhatsApp when approved.</p>
+        </div>
+        <button onclick="switchTab('login')" class="btn-auth" style="max-width:220px; margin:0 auto; display:flex; align-items:center; justify-content:center;">Sign In &rarr;</button>
+    </div>
+</div>
+
+<!-- SIGN IN PANEL -->
+<div id="panelLogin" class="d-none">
+    <div class="mb-3">
+        <h2 style="font-family: var(--font-body); font-size: 1.4rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.2rem;">Welcome back</h2>
+        <p style="font-family: var(--font-body); color: var(--text-muted); font-size: 0.9rem; margin: 0;">Sign in to your ROPIAS dashboard</p>
+    </div>
+    <hr style="border-color: var(--border); margin-bottom: 1.25rem;">
+    <div id="loginFlashArea"></div>
+    <form id="loginForm" method="POST" action="{{ url_for('auth.login') }}">
+        <div class="mb-3">
+            <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color: var(--text-primary);">Email or Username</label>
+            <input type="text" name="identifier" id="loginIdentifier" class="auth-input" placeholder="you@example.com" required>
+        </div>
+        <div class="mb-3 position-relative">
+            <label class="form-label" style="font-size: 0.83rem; font-weight: 500; color: var(--text-primary);">Password</label>
+            <input type="password" name="password" id="loginPass" class="auth-input pe-5" placeholder="Your password" required>
+            <div class="position-absolute toggle-pass" data-target="loginPass" style="right: 16px; top: 40px; color: var(--text-muted); cursor: pointer;">
+                <i data-lucide="eye" style="width:17px;"></i>
+            </div>
+        </div>
+        <div class="mb-4 d-flex justify-content-between align-items-center">
+            <label class="d-flex align-items-center gap-2" style="cursor:pointer; margin:0;">
+                <input type="checkbox" name="remember" class="custom-checkbox">
+                <span style="font-size: 0.88rem; color: var(--text-primary);">Remember me</span>
+            </label>
+            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none" style="font-size: 0.88rem; color: var(--teal); font-weight: 500;">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn-auth d-flex align-items-center justify-content-center gap-2" id="loginSubmitBtn">
+            <span id="loginBtnText">Sign In to ROPIAS</span>
+            <span class="spinner-border spinner-border-sm d-none" id="loginSpinner" style="color:white; width:15px; height:15px;"></span>
+        </button>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+.auth-tab-switcher { display:flex; background:var(--bg-input); border-radius:10px; padding:4px; gap:4px; }
+.auth-tab { flex:1; padding:9px 12px; border:none; border-radius:7px; font-family:var(--font-body); font-size:0.88rem; font-weight:500; color:var(--text-muted); background:transparent; cursor:pointer; transition:all 0.2s; }
+.auth-tab.active { background:var(--bg-card); color:var(--text-primary); box-shadow: 0 1px 4px rgba(47,65,86,0.12); }
+@keyframes draw-check { to { stroke-dashoffset: 0; } }
+.checkmark-circle { stroke-dasharray: 166; stroke-dashoffset: 166; animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.45, 1) 0.2s forwards; }
+.checkmark-tick { stroke-dasharray: 48; stroke-dashoffset: 48; animation: draw-check 0.4s cubic-bezier(0.65, 0, 0.45, 1) 0.7s forwards; }
+</style>
+<script>
+const titles = ["Create your account", "Your farm", "Almost done"];
+const subs   = ["Join Kenya's farmers on ROPIAS", "Tell us where you farm", "Secure your account"];
+const fills  = [0, 50, 100];
+
+function switchTab(tab) {
+    const isLogin = tab === 'login';
+    document.getElementById('panelRegister').classList.toggle('d-none', isLogin);
+    document.getElementById('panelLogin').classList.toggle('d-none', !isLogin);
+    document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+    document.getElementById('tabLogin').classList.toggle('active', isLogin);
+    document.getElementById('mainFormCard').scrollTop = 0;
+}
+
+// Auto-switch to login if there are server-side flash messages from login attempt
+{% if request.args.get('login_error') %}
+switchTab('login');
+{% endif %}
+
+window.nextStep = function(step) {
+    if(step === 2) {
+        if(document.getElementById('nameInput').value.trim().split(' ').length < 2) { alert("Please enter your full name (First and Last)."); return; }
+        if(!document.getElementById('emailInput').checkValidity()) { alert("Please enter a valid email address."); return; }
+        if(document.getElementById('phoneInput').value.length < 10) { alert("Please enter a valid phone number."); return; }
+    }
+    document.querySelectorAll('.step-pane').forEach(el => el.classList.add('d-none'));
+    document.getElementById('step' + step).classList.remove('d-none');
+    document.getElementById('stepTitle').innerText = titles[step-1];
+    document.getElementById('stepCounter').innerText = "Step " + step + " of 3";
+    document.getElementById('stepSub').innerText = subs[step-1];
+    document.getElementById('progressBar').style.width = fills[step-1] + "%";
+    [1,2,3].forEach(i => {
+        const dot = document.getElementById('dot'+i);
+        dot.style.background = i <= step ? 'var(--navy)' : 'var(--border)';
+    });
+};
+
+// GPS on register page
+document.getElementById('regGpsBtn').addEventListener('click', function() {
+    const btn = this;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Detecting...`;
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            document.getElementById('latInput').value = pos.coords.latitude.toFixed(4);
+            document.getElementById('lonInput').value = pos.coords.longitude.toFixed(4);
+            btn.innerHTML = `<i data-lucide="check" style="width:14px;"></i> Location set`;
+            btn.style.color = 'var(--green-safe)';
+            btn.style.borderColor = 'var(--green-safe)';
+            lucide.createIcons();
+        },
+        () => { btn.innerHTML = `📍 GPS blocked. Enter manually.`; btn.style.color = 'var(--red-danger)'; }
+    , { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+});
+
+// Password strength
+const regPass = document.getElementById('regPass');
+const confirm = document.getElementById('regConfirm');
+const bar = document.getElementById('strengthBar');
+const txt = document.getElementById('strengthText');
+const icon = document.getElementById('matchIcon');
+const finalBtn = document.getElementById('finalSubmitBtn');
+const consent = document.getElementById('consentCheck');
+
+regPass.addEventListener('input', () => {
+    const p = regPass.value;
+    let score = [p.length >= 8, /[A-Z]/.test(p), /\d/.test(p), /[!@#$%^&*(),.?":{}<>]/.test(p)].filter(Boolean).length;
+    const cfg = [,[25,'var(--red-danger)','Weak'],[50,'var(--amber-watch)','Medium'],[75,'var(--teal)','Strong'],[100,'var(--green-safe)','Very Strong']];
+    if(score > 0) { bar.style.width=cfg[score][0]+'%'; bar.style.background=cfg[score][1]; txt.innerText=cfg[score][2]; }
+    checkMatch();
+});
+
+function checkMatch() {
+    if(confirm.value.length > 0) {
+        const ok = confirm.value === regPass.value && regPass.value.length > 0;
+        icon.style.display='block';
+        icon.innerHTML = ok ? `<i data-lucide="check" style="width:16px; color:var(--green-safe);"></i>` : `<i data-lucide="x" style="width:16px; color:var(--red-danger);"></i>`;
+        confirm.style.borderColor = ok ? 'var(--green-safe)' : 'var(--red-danger)';
+        lucide.createIcons();
+    } else { icon.style.display='none'; }
+    finalBtn.disabled = !(confirm.value === regPass.value && regPass.value.length >= 8 && consent.checked);
+}
+confirm.addEventListener('input', checkMatch);
+consent.addEventListener('change', checkMatch);
+
+// Form submit with success panel
+document.getElementById('regForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    finalBtn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Creating...';
+    finalBtn.disabled = true;
+    const formData = new FormData(e.target);
+    try {
+        await fetch(e.target.action, { method:'POST', body:formData, redirect:'manual' });
+        document.getElementById('registrationFlow').classList.add('d-none');
+        document.getElementById('successPanel').classList.remove('d-none');
+        document.getElementById('successName').innerText = document.getElementById('nameInput').value.split(' ')[0];
+        document.getElementById('successPhone').innerText = document.getElementById('phoneInput').value;
+    } catch(err) { e.target.submit(); }
+});
+
+// Login form
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginSubmitBtn');
+    btn.disabled = true;
+    document.getElementById('loginBtnText').innerText = 'Verifying...';
+    document.getElementById('loginSpinner').classList.remove('d-none');
+    const formData = new FormData(e.target);
+    try {
+        const resp = await fetch(e.target.action, { method:'POST', body:formData, redirect:'manual' });
+        if(resp.type === 'opaqueredirect' || resp.status === 0) {
+            // Success — trigger greeting overlay
+            runGreetingAnimation(formData.get('identifier'));
+        } else {
+            e.target.submit();
+        }
+    } catch(err) { e.target.submit(); }
+});
+
+function runGreetingAnimation(email) {
+    const overlay = document.getElementById('greeting-overlay');
+    const prog = document.getElementById('greeting-progress');
+    document.getElementById('greeting-avatar').innerText = (email || 'U').charAt(0).toUpperCase();
+    document.getElementById('mainFormCard').style.opacity = '0';
+    document.getElementById('mainFormCard').style.transform = 'scale(0.97)';
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+    requestAnimationFrame(() => {
+        overlay.style.transform = 'translateX(0)';
+        setTimeout(() => { prog.style.width = '100%'; }, 300);
+        setTimeout(() => { window.location.href = "{{ url_for('farmer.dashboard') }}"; }, 1800);
+    });
+}
+
+// Password toggles
+document.querySelectorAll('.toggle-pass').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.getAttribute('data-target'));
+        const vis = target.type === 'password';
+        target.type = vis ? 'text' : 'password';
+        btn.innerHTML = `<i data-lucide="${vis ? 'eye-off' : 'eye'}" style="width:17px; color:${vis ? 'var(--teal)' : 'var(--text-muted)'};"></i>`;
+        lucide.createIcons();
+    });
+});
+
+lucide.createIcons();
+</script>
+{% endblock %}

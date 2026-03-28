@@ -161,6 +161,62 @@ def query_log():
     )
     return render_template("officer/queries.html", logs=logs, user=current_user)
 
+@officer_bp.route("/farmers/pending")
+@login_required
+@admin_required
+def pending_farmers():
+    """Lists all users with status='pending'."""
+    pending = User.query.filter_by(role="farmer", status="pending").order_by(User.created_at.desc()).all()
+    return render_template("officer/pending_farmers.html", pending=pending, user=current_user)
+
+
+@officer_bp.route("/farmers/<int:user_id>/approve", methods=["POST"])
+@login_required
+@admin_required
+def approve_farmer(user_id):
+    """Approves farmer, sends WhatsApp notification."""
+    farmer = User.query.get_or_404(user_id)
+    farmer.status = "approved"
+    farmer.is_active = True
+    farmer.approved_by = current_user.id
+    farmer.approved_at = datetime.utcnow()
+    db.session.commit()
+    
+    from src.whatsapp_alerts import send_approval_notification
+    if farmer.phone:
+        try:
+            send_approval_notification(farmer.phone, farmer.full_name.split()[0])
+        except Exception as e:
+            print(f"Approval WhatsApp failed: {e}")
+            
+    flash(f"{farmer.full_name} has been approved.", "success")
+    return redirect(url_for('officer.pending_farmers'))
+
+
+@officer_bp.route("/farmers/<int:user_id>/reject", methods=["POST"])
+@login_required
+@admin_required
+def reject_farmer(user_id):
+    """Rejects farmer with reason, sends WhatsApp notification."""
+    farmer = User.query.get_or_404(user_id)
+    reason = request.form.get("reason", "No reason provided")
+    farmer.status = "rejected"
+    farmer.is_active = False
+    farmer.rejection_reason = reason
+    db.session.commit()
+    
+    from src.whatsapp_alerts import send_message
+    if farmer.phone:
+        try:
+            msg = f"❌ *ROPIAS Registration Update*\n\nHello {farmer.full_name.split()[0]},\n\nYour ROPIAS registration could not be approved at this time. Reason: {reason}.\n\nContact your local extension officer for assistance."
+            send_message(farmer.phone, msg)
+        except Exception as e:
+            print(f"Rejection WhatsApp failed: {e}")
+            
+    flash(f"{farmer.full_name} has been rejected.", "danger")
+    return redirect(url_for('officer.pending_farmers'))
+
+
 @officer_bp.route("/system", methods=["GET", "POST"])
 @login_required
 @admin_required

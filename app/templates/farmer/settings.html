@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 820px; margin: 0 auto;">
+
+    <h4 class="font-body fw-bold mb-1 d-flex align-items-center gap-2" style="color: var(--text-primary);">
+        <i data-lucide="settings" style="width: 20px; color: var(--teal);"></i> Settings
+    </h4>
+    <p class="mb-4" style="color: var(--text-muted); font-size: 13px; font-family: var(--font-body);">Customize ROPIAS to fit your workflow.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+            <div class="alert alert-{{ category }} mb-3" style="font-family:var(--font-body); font-size:14px; border-radius:var(--radius-md);">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- 1. Display -->
+    <div class="settings-section">
+        <h3><i data-lucide="monitor" style="width:15px; display:inline; margin-right:6px; color:var(--teal);"></i>Display</h3>
+        <div class="mb-3">
+            <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Theme</label>
+            <div class="d-flex gap-2 flex-wrap">
+                <button onclick="setTheme('light')" class="d-flex align-items-center gap-2 px-3 py-2" id="themeLightBtn"
+                        style="border:1.5px solid var(--border); border-radius:var(--radius-md); background:var(--bg-input); color:var(--text-primary); cursor:pointer; font-family:var(--font-body); font-size:13px;">
+                    ☀️ Light
+                </button>
+                <button onclick="setTheme('dark')" class="d-flex align-items-center gap-2 px-3 py-2" id="themeDarkBtn"
+                        style="border:1.5px solid var(--border); border-radius:var(--radius-md); background:var(--bg-input); color:var(--text-primary); cursor:pointer; font-family:var(--font-body); font-size:13px;">
+                    🌙 Dark
+                </button>
+                <button onclick="setTheme('system')" class="d-flex align-items-center gap-2 px-3 py-2" id="themeSystemBtn"
+                        style="border:1.5px solid var(--border); border-radius:var(--radius-md); background:var(--bg-input); color:var(--text-primary); cursor:pointer; font-family:var(--font-body); font-size:13px;">
+                    💻 System
+                </button>
+            </div>
+        </div>
+        <div>
+            <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Language</label>
+            <select class="form-control ropias-input" disabled style="opacity:0.5; max-width:220px;">
+                <option>English</option>
+                <option>Swahili (coming soon)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 2. Dashboard Preferences -->
+    <div class="settings-section">
+        <h3><i data-lucide="sliders-horizontal" style="width:15px; display:inline; margin-right:6px; color:var(--teal);"></i>Dashboard Preferences</h3>
+        <form method="POST" action="{{ url_for('farmer.settings') }}">
+            <input type="hidden" name="action" value="default_crop">
+            <div class="mb-3">
+                <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Default Crop</label>
+                <select name="default_crop" class="form-control ropias-input" style="max-width:260px;">
+                    <option value="maize" {% if user.preferred_crop == 'maize' %}selected{% endif %}>🌽 Maize (Mahindi)</option>
+                    <option value="beans" {% if user.preferred_crop == 'beans' %}selected{% endif %}>🫘 Beans</option>
+                    <option value="tomato" {% if user.preferred_crop == 'tomato' %}selected{% endif %}>🍅 Tomato</option>
+                    <option value="tea" {% if user.preferred_crop == 'tea' %}selected{% endif %}>🍵 Tea</option>
+                    <option value="coffee" {% if user.preferred_crop == 'coffee' %}selected{% endif %}>☕ Coffee</option>
+                    <option value="kale" {% if user.preferred_crop == 'kale' %}selected{% endif %}>🥬 Sukuma Wiki</option>
+                    <option value="irish_potato" {% if user.preferred_crop == 'irish_potato' %}selected{% endif %}>🥔 Potatoes</option>
+                    <option value="cassava" {% if user.preferred_crop == 'cassava' %}selected{% endif %}>🍠 Cassava</option>
+                    <option value="sorghum" {% if user.preferred_crop == 'sorghum' %}selected{% endif %}>🌾 Sorghum</option>
+                    <option value="millet" {% if user.preferred_crop == 'millet' %}selected{% endif %}>🌾 Millet</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" style="font-size:13px; font-weight:500; color:var(--text-secondary);">Rainfall Units</label>
+                <div class="d-flex gap-3 align-items-center">
+                    <label class="d-flex align-items-center gap-2" style="cursor:pointer; font-family:var(--font-body); font-size:14px;">
+                        <input type="radio" name="units" value="mm" checked> mm (standard)
+                    </label>
+                    <label class="d-flex align-items-center gap-2" style="cursor:pointer; font-family:var(--font-body); font-size:14px; opacity:0.5;">
+                        <input type="radio" name="units" value="inches" disabled> inches
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary d-flex gap-2 px-4">
+                <i data-lucide="save" style="width:16px;"></i> Save Preferences
+            </button>
+        </form>
+    </div>
+
+    <!-- 3. Notifications -->
+    <div class="settings-section">
+        <h3><i data-lucide="bell" style="width:15px; display:inline; margin-right:6px; color:var(--teal);"></i>Notifications</h3>
+        <form method="POST" action="{{ url_for('farmer.settings') }}">
+            <input type="hidden" name="action" value="notifications">
+            <div class="d-flex flex-column gap-3 mb-4">
+                <label class="d-flex justify-content-between align-items-center p-3 rounded" style="background:var(--bg-subtle); cursor:pointer;">
+                    <div>
+                        <div style="font-family:var(--font-body); font-weight:500; color:var(--text-primary); font-size:14px;">📱 Daily WhatsApp Advisory</div>
+                        <div style="font-family:var(--font-body); font-size:12px; color:var(--text-muted);">Sent at 6:00 AM with onset status and soil moisture</div>
+                    </div>
+                    <div class="form-check form-switch ms-3">
+                        <input class="form-check-input" type="checkbox" name="whatsapp_alerts" role="switch"
+                               style="width:40px; height:20px; cursor:pointer;" {% if user.whatsapp_alerts %}checked{% endif %}>
+                    </div>
+                </label>
+                <label class="d-flex justify-content-between align-items-center p-3 rounded" style="background:var(--bg-subtle); cursor:not-allowed; opacity:0.5;">
+                    <div>
+                        <div style="font-family:var(--font-body); font-weight:500; color:var(--text-primary); font-size:14px;">⚡ Instant False Onset Alerts <span style="font-size:10px; background:var(--bg-input); padding:1px 5px; border-radius:999px; color:var(--text-muted);">soon</span></div>
+                    </div>
+                    <div class="form-check form-switch ms-3">
+                        <input class="form-check-input" type="checkbox" role="switch" disabled style="width:40px; height:20px;">
+                    </div>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary d-flex gap-2 px-4">
+                <i data-lucide="save" style="width:16px;"></i> Save Notifications
+            </button>
+        </form>
+    </div>
+
+    <!-- 4. Data & Privacy -->
+    <div class="settings-section">
+        <h3><i data-lucide="database" style="width:15px; display:inline; margin-right:6px; color:var(--teal);"></i>Data & Privacy</h3>
+        <div class="d-flex flex-column gap-3">
+            <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:var(--bg-subtle);">
+                <div>
+                    <div style="font-family:var(--font-body); font-weight:500; color:var(--text-primary); font-size:14px;">📥 Download My History</div>
+                    <div style="font-family:var(--font-body); font-size:12px; color:var(--text-muted);">Export all your analysis results as CSV</div>
+                </div>
+                <a href="{{ url_for('farmer.download_history') }}" class="btn btn-ghost d-flex gap-2 px-3 py-2" style="font-size:13px;">
+                    <i data-lucide="download" style="width:14px;"></i> Export
+                </a>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:var(--bg-subtle);">
+                <div>
+                    <div style="font-family:var(--font-body); font-weight:500; color:var(--text-primary); font-size:14px;">🗑️ Clear Analysis History</div>
+                    <div style="font-family:var(--font-body); font-size:12px; color:var(--text-muted);">Permanently delete all your stored advisory results</div>
+                </div>
+                <form method="POST" action="{{ url_for('farmer.clear_history') }}" onsubmit="return confirm('Clear ALL history? This cannot be undone.')">
+                    <button type="submit" class="btn d-flex gap-2 px-3 py-2" style="font-size:13px; background:var(--red-light); color:var(--red-danger); border:1px solid var(--red-danger);">
+                        <i data-lucide="trash-2" style="width:14px;"></i> Clear
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Danger Zone -->
+    <div class="settings-section danger">
+        <h3><i data-lucide="alert-triangle" style="width:15px; display:inline; margin-right:6px;"></i>Session & Account</h3>
+        <div class="d-flex flex-column gap-3">
+            <a href="{{ url_for('auth.logout') }}" onclick="return confirm('Are you sure you want to sign out?')"
+               class="d-flex align-items-center gap-3 p-3 rounded text-decoration-none" style="background:var(--red-light); border:1px solid var(--red-danger);">
+                <i data-lucide="log-out" style="width:18px; color:var(--red-danger);"></i>
+                <div>
+                    <div style="font-family:var(--font-body); font-weight:600; color:var(--red-danger); font-size:14px;">Sign Out of ROPIAS</div>
+                    <div style="font-family:var(--font-body); font-size:12px; color:var(--red-danger); opacity:0.7;">Clears your session and returns to the landing page</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% block scripts %}
+<script>
+function setTheme(t) {
+    localStorage.setItem('ropias-theme', t);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', t === 'system' ? (prefersDark ? 'dark' : 'light') : t);
+    ['light','dark','system'].forEach(th => {
+        const b = document.getElementById('theme' + th.charAt(0).toUpperCase() + th.slice(1) + 'Btn');
+        if(b) { b.style.borderColor = (th === t) ? 'var(--teal)' : 'var(--border)'; b.style.background = (th === t) ? 'var(--bg-subtle)' : 'var(--bg-input)'; }
+    });
+}
+// Highlight current theme on load
+const cur = localStorage.getItem('ropias-theme') || 'system';
+setTheme(cur);
+</script>
+{% endblock %}
+{% endblock %}

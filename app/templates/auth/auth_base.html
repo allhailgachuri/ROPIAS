@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}ROPIAS Auth{% endblock %}</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/ropias.css') }}" rel="stylesheet">
+    <style>
+        .split-layout { min-height: 100vh; display: flex; flex-direction: column; }
+        @media (min-width: 768px) { .split-layout { flex-direction: row; } }
+        
+        .brand-panel {
+            background: linear-gradient(180deg, #1A2530 0%, rgba(26,37,48,0.85) 100%), url('https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800') center/cover;
+            color: #fff; position: relative; display: flex; flex-direction: column; justify-content: center;
+        }
+        @media (min-width: 768px) { .brand-panel { width: 45%; padding: 4rem; } }
+        @media (max-width: 767px) { .brand-panel { padding: 1rem 1.5rem; background: #1A2530; min-height: 60px; justify-content: space-between; flex-direction: row; align-items: center; } .brand-panel-content { display: none; } }
+        
+        .form-panel { background: var(--bg-page); flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 24px;}
+        
+        .form-card { width: 100%; max-width: 440px; transition: all 0.3s ease; }
+        
+        /* The custom auth components */
+        .auth-input { background: var(--bg-input); border: 1.5px solid var(--border); border-radius: 10px; height: 52px; padding: 0 16px; font-family: var(--font-body); color: var(--text-primary); transition: 0.2s ease; width: 100%; outline: none; }
+        .auth-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(86,124,141,0.15); }
+        .auth-input::placeholder { color: var(--text-muted); font-weight: 300; }
+        
+        .btn-auth { width: 100%; height: 52px; background: var(--navy); color: white; border: none; border-radius: 10px; font-family: var(--font-body); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); position: relative; overflow: hidden; z-index: 1;}
+        .btn-auth::before { content: ''; position: absolute; inset: 0; background: var(--teal); transform: translateX(-101%); transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); z-index: -1;}
+        .btn-auth:hover::before { transform: translateX(0); }
+        .btn-auth:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); color: white; }
+        .btn-auth:active { transform: scale(0.99) translateY(0); }
+        .btn-auth:disabled { opacity: 0.7; cursor: not-allowed; pointer-events: none; }
+        
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+        .live-dot { width: 8px; height: 8px; background: #2E7D52; border-radius: 50%; animation: pulse-dot 2s ease-in-out infinite; display: inline-block; }
+        
+        .ticker-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(200,217,230,0.15); border-radius: 16px; padding: 16px 20px; position: absolute; bottom: 40px; left: 40px; right: 40px; backdrop-filter: blur(10px); }
+        @media (max-width: 767px) { .ticker-card { display: none; } }
+        
+        .flash-message { padding: 12px 16px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 24px; position: relative; }
+        .flash-message.alert-danger { background: rgba(192, 57, 43, 0.1); border-left: 4px solid var(--red-danger); color: var(--text-primary); }
+        .flash-message.alert-success { background: rgba(46, 125, 82, 0.1); border-left: 4px solid var(--green-safe); color: var(--text-primary); }
+        .flash-message.alert-warning { background: rgba(183, 121, 31, 0.1); border-left: 4px solid var(--amber-watch); color: var(--text-primary); }
+        .flash-message.alert-info { background: var(--bg-input); border-left: 4px solid var(--navy); color: var(--text-primary); }
+        
+        .custom-checkbox { width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 4px; appearance: none; outline: none; transition: 0.15s; position: relative; cursor: pointer; background: transparent; }
+        .custom-checkbox:checked { background: var(--navy); border-color: var(--navy); }
+        .custom-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60%  { transform: translateX(-6px); }
+          40%, 80%  { transform: translateX(6px); }
+        }
+        .form-card.error-shake { animation: shake 0.4s ease-out; }
+    </style>
+    {% block extra_head %}{% endblock %}
+    <script>
+        (function() {
+            const saved = localStorage.getItem('ropias-theme') || 'system';
+            if (saved === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', saved);
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="split-layout">
+        <div class="brand-panel">
+            <!-- Mobile Header Only -->
+            <a href="/" class="d-md-none text-decoration-none d-flex align-items-center gap-2">
+                <img src="{{ url_for('static', filename='img/logo-light.png') }}" style="height:24px; filter: brightness(0) invert(1);" alt="ROPIAS">
+                <span style="font-family: var(--font-display); color: white; font-size: 1.2rem;">ROPIAS</span>
+            </a>
+            
+            <!-- Desktop Layout -->
+            <div class="brand-panel-content">
+                <a href="/" class="text-decoration-none">
+                    <img src="{{ url_for('static', filename='img/logo-light.png') }}" style="height: 48px; filter: invert(0.8) sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2);" class="mb-3" alt="ROPIAS">
+                </a>
+                <h1 style="font-family: var(--font-display); font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.1;">ROPIAS</h1>
+                <p style="font-family: var(--font-body); font-weight: 300; font-size: 0.85rem; color: #C8D9E6; letter-spacing: 0.05em; text-transform: uppercase;">Rainfall Onset Prediction<br>& Irrigation Advisory System</p>
+                <div style="height: 1px; background: rgba(200,217,230,0.3); margin: 2rem 0; width: 100%;"></div>
+                <h2 style="font-family: var(--font-display); font-style: italic; font-size: 1.6rem; color: #C8D9E6;">"Know before you plant."</h2>
+                <div style="font-family: var(--font-body); font-weight: 300; font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2rem;">
+                    Built at KCA University<br>Powered by NASA POWER data
+                </div>
+            </div>
+            
+            <div class="ticker-card font-mono">
+                <div class="d-flex align-items-center mb-2 gap-2" style="font-size: 11px;">
+                    <div class="live-dot"></div> <span class="fw-bold">LIVE NASA POWER API</span>
+                </div>
+                <div style="font-size: 11px; color: rgba(200,217,230,0.8); line-height: 1.5;">
+                    PRECTOTCORR · GWETROOT<br>
+                    Coverage: Kenya (−5° to 5°N)<br>
+                    Resolution: 0.5° × 0.5°<br>
+                    Latency: 24–48 hours<br>
+                    <span id="ticker-text" class="text-white mt-1 d-block transition-opacity duration-300">Western Kenya Long Rains — monitoring active</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-panel">
+            <div class="form-card" id="mainFormCard">
+                {% block content %}{% endblock %}
+            </div>
+            
+            <!-- Theme Toggle fixed bottom right -->
+            <button class="shadow-lg" style="position:fixed; bottom:24px; right:24px; z-index:9000; padding:10px 16px; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border); border-radius:999px; cursor:pointer;" onclick="cycleTheme()">
+                <i data-lucide="monitor" id="theme-icon" style="width:16px;"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Full Screen Post-Login Overlay -->
+    <div id="greeting-overlay" style="position:fixed; inset:0; background:var(--bg-card); transform:translateX(100%); transition:transform 0.5s cubic-bezier(0.65, 0, 0.35, 1); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0;">
+        <div class="d-flex align-items-center justify-content-center rounded-circle mb-4" id="greeting-avatar" style="width: 80px; height: 80px; background-color: var(--navy); color: var(--white); font-size: 2rem; font-weight:600; box-shadow: 0 8px 40px rgba(47,65,86,0.3);">
+            U
+        </div>
+        <h1 class="fst-italic text-center mb-2" id="greeting-text" style="font-family:var(--font-display); font-size:3rem; color:var(--text-primary);">Habari!</h1>
+        <p class="fw-light text-center mb-5" id="greeting-sub" style="font-family:var(--font-body); color:var(--text-muted);">Taking you to your dashboard...</p>
+        <div style="width: 200px; height: 4px; background:var(--bg-input); border-radius:4px; overflow:hidden;">
+            <div id="greeting-progress" style="height:100%; width:0%; background:var(--navy); transition:width 1.5s ease-out;"></div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        // Ticker Logic
+        const msgs = [
+            "Western Kenya Long Rains — monitoring active",
+            "37 crops with calibrated onset thresholds",
+            "Protecting smallholder farmers from false onsets"
+        ];
+        let tIdx = 0;
+        setInterval(() => {
+            tIdx = (tIdx + 1) % msgs.length;
+            const el = document.getElementById('ticker-text');
+            if(el) {
+                el.style.opacity = 0;
+                setTimeout(() => { el.innerText = msgs[tIdx]; el.style.opacity = 1; }, 300);
+            }
+        }, 4000);
+
+        // Page Transitions
+        document.querySelectorAll('a[data-transition]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.body.style.opacity = '0';
+                document.body.style.transition = 'opacity 0.2s ease';
+                setTimeout(() => { window.location = link.href; }, 200);
+            });
+        });
+
+        function cycleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            let next = 'light';
+            if(current === 'light') next = 'dark';
+            else if(current === 'dark') next = 'system';
+            localStorage.setItem('ropias-theme', next);
+            if (next === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', next);
+            }
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

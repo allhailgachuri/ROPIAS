@@ -1,62 +1,163 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid px-3 px-md-5 py-4" style="max-width: 1400px; margin: 0 auto;">
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1300px; margin: 0 auto;">
 
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
         <div>
             <h4 class="font-body fw-bold m-0 d-flex align-items-center gap-2" style="color: var(--text-primary);">
-                <i data-lucide="library" class="w-6 h-6 text-[var(--teal)]"></i> Kenyan Crop Database
+                <i data-lucide="library" style="width: 20px; color: var(--teal);"></i> Kenyan Crop Database
             </h4>
-            <p class="font-body m-0 mt-2" style="color: var(--text-muted); font-size: 14px;">Agronomic thresholds powering the ROPIAS Decision Engine.</p>
+            <p class="font-body m-0 mt-1" style="color: var(--text-muted); font-size: 13px;">
+                Agronomic thresholds powering the ROPIAS Decision Engine — {{ crops_by_category.values()|map('length')|sum }} crops across Kenya.
+            </p>
         </div>
+
+        <!-- NASA Banner -->
+        {% if nasa_stats %}
+        <div class="ropias-card px-3 py-2 d-flex flex-column" style="border-left: 3px solid var(--teal); min-width:220px; flex-shrink:0;">
+            <div class="font-mono d-flex align-items-center gap-2 mb-1" style="font-size:10px; color:var(--text-muted);">
+                <div style="width:6px; height:6px; border-radius:50%; background:var(--green-safe);"></div> LIVE NASA POWER · Your farm
+            </div>
+            <div class="d-flex gap-3 flex-wrap">
+                <div>
+                    <div class="font-mono fw-bold" style="font-size:15px; color:var(--navy);">{{ nasa_stats.total_rain_30d }}mm</div>
+                    <div class="font-body" style="font-size:10px; color:var(--text-muted);">30-day rain</div>
+                </div>
+                {% if nasa_stats.current_moisture %}
+                <div>
+                    <div class="font-mono fw-bold" style="font-size:15px; color:var(--teal);">{{ nasa_stats.current_moisture }}%</div>
+                    <div class="font-body" style="font-size:10px; color:var(--text-muted);">soil moisture</div>
+                </div>
+                {% endif %}
+                <div>
+                    <div class="font-mono fw-bold" style="font-size:15px; color:var(--amber-watch);">{{ nasa_stats.dry_days_30 }}d</div>
+                    <div class="font-body" style="font-size:10px; color:var(--text-muted);">dry days</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- Category Pills -->
-    <div class="d-flex gap-2 overflow-auto pb-3 mb-4" style="white-space: nowrap;">
-        <button class="btn btn-primary rounded-pill px-4" style="height: 40px; font-size: 14px;">All</button>
+    <!-- Category filter pills -->
+    <div class="d-flex gap-2 overflow-auto pb-2 mb-4" style="white-space: nowrap;" id="categoryFilters">
+        <button class="pill active" onclick="filterCategory('all', this)"
+                style="padding:6px 14px; border-radius:999px; font-size:13px; background:var(--navy); color:white; border:none; cursor:pointer; font-family:var(--font-body);">
+            All
+        </button>
         {% for cat in crops_by_category.keys() %}
-            <button class="btn rounded-pill px-4 font-body" style="height: 40px; font-size: 14px; background-color: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border);">{{ cat.replace('_', ' ').title() }}</button>
+        <button class="pill" onclick="filterCategory('{{ cat }}', this)"
+                style="padding:6px 14px; border-radius:999px; font-size:13px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border); cursor:pointer; font-family:var(--font-body);">
+            {{ cat }}
+        </button>
         {% endfor %}
     </div>
 
-    <!-- DB Grid -->
-    <div class="row g-4">
-        {% for category, crops in crops_by_category.items() %}
-            {% for crop in crops %}
-            <div class="col-12 col-md-6 col-lg-4">
+    <!-- Search -->
+    <div class="mb-4 position-relative" style="max-width:360px;">
+        <i data-lucide="search" style="width:15px; position:absolute; top:50%; left:12px; transform:translateY(-50%); color:var(--text-muted);"></i>
+        <input id="cropSearch" type="text" class="form-control ropias-input" style="padding-left:36px; height:40px; font-size:13px;"
+               placeholder="Search crops..." oninput="searchCrops(this.value)">
+    </div>
+
+    <!-- Grid -->
+    <div class="row g-4" id="cropsGrid">
+        {% for category, crop_list in crops_by_category.items() %}
+            {% for crop in crop_list %}
+            <div class="col-12 col-md-6 col-lg-4 crop-card-wrapper" data-category="{{ category }}" data-name="{{ crop.display_name|lower }}">
                 <div class="ropias-card p-4 h-100 d-flex flex-column justify-content-between">
-                    
                     <div>
+                        <!-- Card header -->
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h5 class="font-body fw-bold mb-0 text-truncate" style="font-size: 18px; color: var(--text-primary);">{{ crop.emoji }} {{ crop.name }}</h5>
-                            <span class="badge rounded-pill font-mono bg-[var(--bg-subtle)] text-[var(--teal)] fw-normal" style="font-size: 11px; padding: 4px 10px;">{{ category.replace('_', ' ').title() }}</span>
+                            <h5 class="font-body fw-bold mb-0" style="font-size: 16px; color: var(--text-primary); line-height:1.3;">
+                                {{ crop.display_name }}
+                            </h5>
+                            <span class="font-body fw-normal rounded-pill px-2 py-0 ms-2" style="font-size: 10px; background:var(--bg-subtle); color:var(--teal); border:1px solid var(--border); white-space:nowrap; flex-shrink:0;">
+                                {{ category }}
+                            </span>
                         </div>
-                        
-                        <div class="mt-4 pb-4 border-bottom" style="border-color: var(--border)!important;">
+
+                        <!-- Agronomic thresholds -->
+                        <div class="pb-3 mb-3" style="border-bottom: 1px solid var(--border);">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="font-mono text-muted" style="font-size: 12px;">Onset Requirement</span>
-                                <span class="font-mono fw-bold" style="font-size: 12px; color: var(--text-primary);">{{ crop.onset_rain_mm }}mm / {{ crop.onset_days }} days</span>
+                                <span class="font-mono" style="font-size: 11px; color:var(--text-muted);">Onset Requirement</span>
+                                <span class="font-mono fw-bold" style="font-size: 11px; color: var(--text-primary);">
+                                    {{ crop.onset_threshold_mm }}mm / {{ crop.onset_window_days }}d
+                                </span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="font-mono text-muted" style="font-size: 12px;">Max Dry Spell</span>
-                                <span class="font-mono fw-bold" style="font-size: 12px; color: var(--red-danger);">{{ crop.dry_spell_limit }} days</span>
+                                <span class="font-mono" style="font-size: 11px; color:var(--text-muted);">Max Dry Spell</span>
+                                <span class="font-mono fw-bold" style="font-size: 11px; color: var(--red-danger);">
+                                    {{ crop.dry_spell_days }} days
+                                </span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="font-mono text-muted" style="font-size: 12px;">Optimal Moisture</span>
-                                <span class="font-mono fw-bold" style="font-size: 12px; color: var(--green-safe);">{{ "%.0f"|format(crop.field_capacity_min * 100) }}% – {{ "%.0f"|format(crop.field_capacity_max * 100) }}%</span>
+                                <span class="font-mono" style="font-size: 11px; color:var(--text-muted);">Optimal Moisture</span>
+                                <span class="font-mono fw-bold" style="font-size: 11px; color: var(--green-safe);">
+                                    {{ "%.0f"|format(crop.optimal_moisture_min * 100) }}%–{{ "%.0f"|format(crop.optimal_moisture_max * 100) }}%
+                                </span>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span class="font-mono text-muted" style="font-size: 12px;">Critical Wilt Pt.</span>
-                                <span class="font-mono fw-bold" style="font-size: 12px; color: var(--amber-watch);">{{ "%.0f"|format(crop.wilting_point * 100) }}%</span>
+                                <span class="font-mono" style="font-size: 11px; color:var(--text-muted);">Critical Wilt Pt.</span>
+                                <span class="font-mono fw-bold" style="font-size: 11px; color: var(--amber-watch);">
+                                    {{ "%.0f"|format(crop.critical_moisture * 100) }}%
+                                </span>
                             </div>
                         </div>
 
-                        <p class="font-body mt-3 text-muted fst-italic" style="font-size: 13px; line-height: 1.6;">{{ crop.notes }}</p>
+                        <!-- NASA stats block (only if farm location saved) -->
+                        {% if nasa_stats and nasa_stats.current_moisture is not none %}
+                        <div class="mb-3 p-2 rounded" style="background: var(--bg-subtle); border:1px solid var(--border);">
+                            <div class="font-mono d-flex align-items-center gap-1 mb-2" style="font-size:9px; color:var(--text-muted);">
+                                <div style="width:5px; height:5px; border-radius:50%; background:var(--green-safe);"></div> NASA — Your farm (30 days)
+                            </div>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <div>
+                                    <div class="font-mono fw-bold" style="font-size:13px; color:var(--navy);">{{ nasa_stats.total_rain_30d }}mm</div>
+                                    <div class="font-body" style="font-size:9px; color:var(--text-muted);">total rain</div>
+                                </div>
+                                <div>
+                                    {% set m = nasa_stats.current_moisture %}
+                                    {% set opt_min = crop.optimal_moisture_min * 100 %}
+                                    {% set opt_max = crop.optimal_moisture_max * 100 %}
+                                    {% set wilt = crop.critical_moisture * 100 %}
+                                    {% if m >= opt_min and m <= opt_max %}
+                                        {% set m_color = 'var(--green-safe)' %}
+                                    {% elif m < wilt %}
+                                        {% set m_color = 'var(--red-danger)' %}
+                                    {% else %}
+                                        {% set m_color = 'var(--amber-watch)' %}
+                                    {% endif %}
+                                    <div class="font-mono fw-bold" style="font-size:13px; color:{{ m_color }};">{{ m }}%</div>
+                                    <div class="font-body" style="font-size:9px; color:var(--text-muted);">moisture now</div>
+                                </div>
+                                <div>
+                                    {% if nasa_stats.wet_days_30 >= 15 %}
+                                        {% set w_color = 'var(--green-safe)' %}
+                                    {% elif nasa_stats.wet_days_30 >= 8 %}
+                                        {% set w_color = 'var(--amber-watch)' %}
+                                    {% else %}
+                                        {% set w_color = 'var(--red-danger)' %}
+                                    {% endif %}
+                                    <div class="font-mono fw-bold" style="font-size:13px; color:{{ w_color }};">{{ nasa_stats.wet_days_30 }}/30</div>
+                                    <div class="font-body" style="font-size:9px; color:var(--text-muted);">wet days</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Description -->
+                        <p class="font-body fst-italic" style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 0;">
+                            {{ crop.description }}
+                        </p>
                     </div>
 
-                    <a href="{{ url_for('farmer.dashboard') }}" class="btn btn-ghost w-100 mt-4 d-flex gap-2">
-                        <i data-lucide="crosshair" class="w-4 h-4 mt-1"></i> Analyze {{ crop.name }}
+                    <!-- Analyze button -->
+                    <a href="{{ url_for('farmer.dashboard') }}?crop={{ crop.id }}&lat={{ user.farm_latitude or '' }}&lon={{ user.farm_longitude or '' }}"
+                       class="btn btn-ghost w-100 mt-4 d-flex gap-2 align-items-center justify-content-center" style="font-size:13px;">
+                        <i data-lucide="crosshair" style="width: 14px;"></i>
+                        Analyze {{ crop.display_name.split('(')[0].strip() }}
                     </a>
                 </div>
             </div>
@@ -65,4 +166,30 @@
     </div>
 
 </div>
+
+{% block scripts %}
+<script>
+function filterCategory(cat, btn) {
+    document.querySelectorAll('#categoryFilters .pill').forEach(b => {
+        b.style.background = 'var(--bg-input)';
+        b.style.color = 'var(--text-primary)';
+        b.style.borderColor = 'var(--border)';
+        b.style.borderStyle = 'solid';
+    });
+    btn.style.background = 'var(--navy)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--navy)';
+    document.querySelectorAll('.crop-card-wrapper').forEach(card => {
+        card.style.display = (cat === 'all' || card.dataset.category === cat) ? '' : 'none';
+    });
+}
+function searchCrops(query) {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('.crop-card-wrapper').forEach(card => {
+        card.style.display = (!q || card.dataset.name.includes(q) || card.innerText.toLowerCase().includes(q)) ? '' : 'none';
+    });
+}
+lucide.createIcons();
+</script>
+{% endblock %}
 {% endblock %}

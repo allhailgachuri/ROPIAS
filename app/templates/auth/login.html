@@ -1,223 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROPIAS | Login</title>
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Base Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ropias.css') }}">
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-            background-color: #F5EFEB; /* beige */
-        }
-        .login-wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-        .login-brand-panel {
-            background-color: #2F4156; /* navy */
-            color: white;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            text-align: center;
-        }
-        .login-brand-panel h1 {
-            font-family: 'Playfair Display', serif;
-            font-weight: 600;
-            font-size: 3rem;
-            margin-top: 1.5rem;
-            letter-spacing: -0.5px;
-        }
-        .login-brand-panel p {
-            font-family: 'Source Sans 3', sans-serif;
-            font-size: 1.25rem;
-            color: #C8D9E6; /* sky */
-            max-width: 400px;
-            margin-top: 1rem;
-        }
-        .login-form-panel {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            background-color: #F5EFEB; /* beige */
-        }
-        .login-card {
-            background: white;
-            border-radius: 16px;
-            padding: 3rem;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08); /* subtle shadow */
-        }
-        .login-card .icon-top {
-            display: none; /* hidden on desktop, block on mobile */
-        }
-        .login-input {
-            background-color: #C8D9E6 !important; /* sky */
-            border: 2px solid transparent;
-            color: #2F4156;
-            font-weight: 500;
-            padding: 0.8rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        .login-input:focus {
-            background-color: #fff !important;
-            border-color: #2F4156; /* navy */
-            box-shadow: 0 0 0 0.2rem rgba(47, 65, 86, 0.25);
-        }
-        .login-btn {
-            background-color: #2F4156; /* navy */
-            color: white;
-            border: none;
-            padding: 0.8rem;
-            font-weight: 600;
-            border-radius: 8px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-        .login-btn:hover {
-            background-color: #567C8D; /* teal */
-            color: white;
-        }
-        .form-label {
-            color: #2F4156;
-            font-weight: 600;
-        }
-        /* Mobile handling */
-        @media (max-width: 768px) {
-            .login-wrapper {
-                flex-direction: column;
-            }
-            .login-brand-panel {
-                flex: none;
-                padding: 1.5rem;
-                height: auto;
-            }
-            .login-brand-panel h1 {
-                font-size: 2rem;
-                margin-top: 0.5rem;
-            }
-            .login-brand-panel p {
-                font-size: 1rem;
-                margin-top: 0.5rem;
-                margin-bottom: 0;
-            }
-            .login-card {
-                padding: 2rem;
-                box-shadow: none;
-            }
-        }
-        
-        .alert-flash {
-            border-radius: 8px;
-            border: none;
-            font-weight: 500;
-        }
-        .alert-flash.alert-danger {
-            background-color: #F8D7DA;
-            color: #842029;
-            border-left: 4px solid #842029;
-        }
-        .alert-flash.alert-success {
-            background-color: #D1E7DD;
-            color: #0F5132;
-            border-left: 4px solid #567C8D;
-        }
-        .alert-flash.alert-info {
-            background-color: #CFE2FF;
-            color: #084298;
-            border-left: 4px solid #2F4156;
-        }
-    </style>
-</head>
-<body>
+{% extends "auth/auth_base.html" %}
 
-<div class="login-wrapper">
-    <!-- Brand Panel (Left) -->
-    <div class="login-brand-panel shadow-sm">
-        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="white" class="bi bi-cloud-rain-fill" viewBox="0 0 16 16">
-            <path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/>
-        </svg>
-        <h1>ROPIAS</h1>
-        <p>Protecting Kenya's harvests with satellite intelligence</p>
+{% block content %}
+<div class="mb-4">
+    <h2 style="font-family: var(--font-body); font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Welcome back</h2>
+    <p style="font-family: var(--font-body); color: var(--text-muted); font-size: 0.95rem; margin: 0;">Sign in to your advisory dashboard</p>
+</div>
+<hr style="border-color: var(--border); margin-bottom: 1.5rem;">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <script>document.addEventListener("DOMContentLoaded", () => { const c = document.getElementById('mainFormCard'); if(document.querySelector('.alert-danger')) c.classList.add('error-shake'); });</script>
+        {% for category, message in messages %}
+            <div class="flash-message alert-{{ category }}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>{{ message }}</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text-muted);">✕</button>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<form id="loginForm" method="POST" action="{{ url_for('auth.login') }}">
+    <div class="mb-3">
+        <label class="form-label" style="font-family: var(--font-body); font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">Email or Username</label>
+        <input type="text" name="identifier" class="auth-input" placeholder="you@example.com" required>
     </div>
-
-    <!-- Form Panel (Right) -->
-    <div class="login-form-panel">
-        <div class="login-card">
-            
-            <div class="text-center mb-4">
-                <h3 style="font-family: 'Playfair Display', serif; color: #2F4156; font-weight: 600;">Welcome Back</h3>
-                <p class="text-muted small">Please sign in to access your dashboard</p>
-            </div>
-
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ category }} alert-flash alert-dismissible fade show mb-4 pb-2 pt-2" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close pb-2 pt-2" data-bs-dismiss="alert" aria-label="Close"></button>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
-
-            <form method="POST" action="{{ url_for('auth.login') }}">
-                <div class="mb-4">
-                    <label for="identifier" class="form-label" style="font-size: 0.9rem;">Login with email or username</label>
-                    <input type="text" class="form-control login-input" id="identifier" name="identifier" required placeholder="name@example.com">
-                </div>
-                
-                <div class="mb-4">
-                    <label for="password" class="form-label" style="font-size: 0.9rem;">Password</label>
-                    <input type="password" class="form-control login-input" id="password" name="password" required placeholder="********">
-                </div>
-                
-                <div class="mb-4 form-check">
-                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                    <label class="form-check-label text-muted" for="remember">Remember me on this device</label>
-                </div>
-                
-                <button type="submit" class="btn login-btn">Sign In</button>
-            </form>
-
-            <div class="d-flex align-items-center mb-4 mt-3">
-                <hr class="flex-grow-1" style="opacity: 0.1;">
-                <span class="px-3 text-muted small">or log in with</span>
-                <hr class="flex-grow-1" style="opacity: 0.1;">
-            </div>
-
-            <!-- Google OAuth Entry -->
-            <a href="{{ url_for('auth.login_google') }}" class="btn google-btn mb-4 d-flex justify-content-center align-items-center gap-2 bg-white border" style="color: #2F4156; padding:0.8rem; font-weight:600; border-radius:8px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-google" viewBox="0 0 16 16">
-                  <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z"/>
-                </svg>
-                Sign in with Google
-            </a>
-
-            <div class="text-center mt-4 border-top pt-4">
-                <p class="text-muted small mb-0">Don't have an account?</p>
-                <a href="{{ url_for('auth.signup') }}" class="text-decoration-none fw-bold" style="color: #567C8D;">Sign up here</a>
-            </div>
-
+    <div class="mb-4 position-relative">
+        <label class="form-label" style="font-family: var(--font-body); font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">Password</label>
+        <input type="password" name="password" id="passInput" class="auth-input pe-5" placeholder="Enter your password" required>
+        <div class="position-absolute" id="togglePass" style="right: 16px; top: 40px; color: var(--text-muted); cursor: pointer;" title="Toggle Password">
+            <i data-lucide="eye" style="width:18px;"></i>
         </div>
     </div>
-</div>
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <label class="d-flex align-items-center gap-2" style="cursor:pointer; margin:0;">
+            <input type="checkbox" name="remember" class="custom-checkbox">
+            <span style="font-family: var(--font-body); font-size: 0.9rem; color: var(--text-primary);">Remember me</span>
+        </label>
+        <a href="{{ url_for('auth.forgot_password') }}" data-transition="true" class="text-decoration-none" style="font-family: var(--font-body); font-size: 0.9rem; color: var(--teal); font-weight: 500;">Forgot password?</a>
+    </div>
+    <button type="submit" class="btn-auth d-flex align-items-center justify-content-center gap-2" id="submitBtn">
+        <span id="btnText">Sign In to ROPIAS</span>
+        <span class="spinner-border spinner-border-sm d-none" id="btnSpinner" style="color:white; width:16px; height:16px;"></span>
+    </button>
+</form>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<hr style="border-color: var(--border); margin: 2rem 0;">
+<div class="text-center">
+    <span style="font-family: var(--font-body); font-size: 0.95rem; color: var(--text-muted);">New to ROPIAS? </span>
+    <a href="{{ url_for('auth.register') }}" data-transition="true" class="text-decoration-none" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--navy); font-weight: 600;">Create an account &rarr;</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const passInput = document.getElementById('passInput');
+    const togglePass = document.getElementById('togglePass');
+    let passVisible = false;
+    togglePass.addEventListener('click', () => {
+        passVisible = !passVisible;
+        passInput.type = passVisible ? 'text' : 'password';
+        togglePass.innerHTML = `<i data-lucide="${passVisible ? 'eye-off' : 'eye'}" style="width:18px; color:var(--teal);"></i>`;
+        lucide.createIcons();
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        document.getElementById('btnSpinner').classList.remove('d-none');
+        document.getElementById('btnText').innerText = 'Verifying...';
+        const formData = new FormData(e.target);
+        try {
+            const resp = await fetch(e.target.action, { method: 'POST', body: formData, redirect: 'manual' });
+            if(resp.type === 'opaqueredirect' || resp.status === 0) {
+                const overlay = document.getElementById('greeting-overlay');
+                const prog = document.getElementById('greeting-progress');
+                document.getElementById('greeting-avatar').innerText = (formData.get('identifier') || 'U').charAt(0).toUpperCase();
+                document.getElementById('mainFormCard').style.opacity = '0';
+                overlay.style.display = 'flex';
+                overlay.style.opacity = '1';
+                requestAnimationFrame(() => {
+                    overlay.style.transform = 'translateX(0)';
+                    setTimeout(() => { prog.style.width = '100%'; }, 300);
+                    setTimeout(() => { e.target.submit(); }, 1800);
+                });
+            } else {
+                e.target.submit();
+            }
+        } catch(err) { e.target.submit(); }
+    });
+</script>
+{% endblock %}
