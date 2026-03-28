@@ -1,6 +1,7 @@
 flask>=3.0.3
 flask-cors>=4.0.0
 flask-sqlalchemy>=3.1.1
+flask-login>=0.6.3
 pandas>=2.2.1
 numpy>=1.26.4
 requests>=2.31.0
@@ -11,5 +12,5 @@ africastalking>=2.0.2
 python-dotenv>=1.0.1
 gunicorn>=21.2.0
 itsdangerous>=2.1.2
-
-# python -m pip install flask-login psycopg2-binary twilio apscheduler
+psycopg2-binary>=2.9.9
+twilio>=9.0.0
