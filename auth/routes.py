@@ -43,17 +43,17 @@ def login():
         )
 
         if user and user.check_password(password):
-            if not user.is_active:
-                flash("This account has been deactivated. Contact your extension officer for assistance.", "danger")
-                return render_template("auth/login.html")
-            
-            # Check strictly for pending farmers (ignoring seeds)
+            # Check pending first (before is_active) so message is precise
             if user.status == "pending" and not user.is_seeded:
                 flash("Your account is pending approval by an extension officer. You will receive a WhatsApp message when approved.", "warning")
                 return render_template("auth/login.html")
             
             if user.status == "rejected":
                 flash(f"This account application was declined. Reason: {user.rejection_reason or 'Not provided'}", "danger")
+                return render_template("auth/login.html")
+
+            if not user.is_active:
+                flash("This account has been deactivated. Contact your extension officer for assistance.", "danger")
                 return render_template("auth/login.html")
 
             login_user(user, remember=remember)
@@ -133,8 +133,8 @@ def register():
             email=email,
             phone=phone,
             role="farmer",
-            status="pending",
-            is_active=False,
+            status="approved",   # Self-registered farmers are immediately active
+            is_active=True,
             farm_latitude=flat,
             farm_longitude=flon,
             preferred_crop=crop,
@@ -166,8 +166,8 @@ def register():
                 except Exception as e:
                     print(f"Failed to alert admin: {e}")
 
-        # Note: We do NOT log them in. They see success screen natively.
-        flash("Account created! Check WhatsApp for approval status.", "success")
+        # Auto-approved: farmer can sign in immediately
+        flash("Account created successfully! You can now sign in and start using ROPIAS.", "success")
         return redirect(url_for("auth.login"))
 
     return render_template("auth/register.html")

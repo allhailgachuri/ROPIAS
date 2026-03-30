@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}ROPIAS | Officer Panel{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.png') }}">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Application CSS -->
+    <link href="{{ url_for('static', filename='css/ropias.css') }}" rel="stylesheet">
+
+    <!-- Leaflet (for maps) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Immediate Theme Injection -->
+    <script>
+        (function() {
+            const saved = localStorage.getItem('ropias-theme') || 'system';
+            if (saved === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', saved);
+            }
+        })();
+    </script>
+
+    <style>
+        /* ══════════════════════════════════════════════
+           OFFICER DESIGN SYSTEM
+           Navy/Teal authority palette — same variables as farmer
+        ══════════════════════════════════════════════ */
+        :root {
+            --officer-accent: #2F4156;
+            --officer-highlight: #1A2E40;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: var(--font-body, 'DM Sans', sans-serif); background: var(--bg-page); color: var(--text-primary); }
+
+        /* ─── TOPBAR ────────────────────────────────── */
+        .officer-topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 64px;
+            background: var(--officer-highlight, #1A2E40);
+            border-bottom: 1px solid rgba(200,217,230,0.15);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+            gap: 16px;
+        }
+        .officer-topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        .officer-topbar-logo img { height: 42px; width: auto; }
+        .officer-topbar-label {
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--sky, #C8D9E6);
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+        .officer-topbar-spacer { flex: 1; }
+
+        /* Pending badge */
+        .pending-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--red-danger, #C0392B);
+            color: white;
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-family: var(--font-body);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+            animation: pulse-badge 3s ease-in-out infinite;
+        }
+        .pending-badge:hover { opacity: 0.85; color: white; }
+        .pending-badge.hidden { display: none; }
+        @keyframes pulse-badge { 0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.4); } 50% { box-shadow: 0 0 0 8px rgba(192,57,43,0); } }
+
+        /* Officer Profile Dropdown */
+        .officer-profile-wrapper { position: relative; }
+        .officer-avatar {
+            width: 38px; height: 38px;
+            background: var(--teal, #567C8D);
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-weight: 700; font-size: 13px;
+            transition: box-shadow 0.2s;
+            user-select: none;
+            border: 2px solid rgba(200,217,230,0.3);
+            flex-shrink: 0;
+        }
+        .officer-avatar:hover { box-shadow: 0 0 0 3px rgba(86,124,141,0.5); }
+
+        .officer-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            min-width: 210px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            padding: 8px; z-index: 2000;
+            display: none;
+        }
+        .officer-dropdown.open { display: block; animation: dropIn 0.15s ease; }
+        @keyframes dropIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+        .officer-dropdown-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+        .officer-dropdown-name { font-family:var(--font-body); font-weight:600; font-size:14px; color:var(--text-primary); }
+        .officer-dropdown-role { font-family:var(--font-mono); font-size:11px; color:var(--teal); }
+        .officer-dropdown-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 12px; border-radius: 8px;
+            font-family: var(--font-body); font-size: 14px;
+            color: var(--text-primary); text-decoration: none;
+            transition: background 0.15s; cursor: pointer;
+        }
+        .officer-dropdown-item:hover { background: var(--bg-subtle); color: var(--text-primary); }
+        .officer-dropdown-item.danger { color: var(--red-danger); }
+        .officer-dropdown-item.danger:hover { background: rgba(192,57,43,0.08); }
+        .officer-dropdown-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+        /* Theme toggle in topbar */
+        .topbar-theme-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(200,217,230,0.2);
+            border-radius: 999px;
+            padding: 6px 12px;
+            color: #C8D9E6;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .topbar-theme-btn:hover { background: rgba(255,255,255,0.15); }
+
+        /* Hamburger (mobile) */
+        .officer-hamburger {
+            background: none; border: none;
+            color: #C8D9E6; cursor: pointer;
+            padding: 4px; display: none;
+        }
+        @media (max-width: 767px) { .officer-hamburger { display: flex; align-items: center; } }
+
+        /* ─── SIDEBAR ───────────────────────────────── */
+        .officer-sidebar {
+            position: fixed;
+            top: 64px; left: 0;
+            width: 220px;
+            height: calc(100vh - 64px);
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            z-index: 900;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        @media (max-width: 767px) {
+            .officer-sidebar { transform: translateX(-100%); }
+            .officer-sidebar.open { transform: translateX(0); z-index: 950; }
+            .officer-sidebar-backdrop {
+                display: none; position: fixed; inset: 0; top: 64px;
+                background: rgba(0,0,0,0.4); z-index: 940;
+            }
+            .officer-sidebar-backdrop.open { display: block; }
+        }
+
+        /* Officer info card in sidebar top */
+        .officer-info-card {
+            margin: 12px; padding: 12px;
+            background: var(--bg-subtle);
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .officer-info-name { font-family: var(--font-body); font-weight: 600; font-size: 14px; color: var(--text-primary); }
+        .officer-info-role { font-family: var(--font-mono); font-size: 11px; color: var(--teal); }
+        .officer-info-org { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        /* Sidebar nav sections */
+        .nav-section-label {
+            padding: 12px 14px 4px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .officer-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 14px;
+            margin: 1px 8px;
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 13.5px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+            position: relative;
+        }
+        .officer-nav-link:hover { background: var(--bg-subtle); color: var(--teal); }
+        .officer-nav-link.active {
+            background: rgba(86,124,141,0.12);
+            color: var(--teal);
+            border-left: 3px solid var(--teal);
+            margin-left: 5px;
+        }
+        .officer-nav-link i { width: 16px; height: 16px; flex-shrink: 0; }
+        .nav-badge {
+            margin-left: auto;
+            background: var(--red-danger);
+            color: white;
+            border-radius: 999px;
+            padding: 1px 7px;
+            font-size: 11px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+        }
+        .sidebar-divider { height: 1px; background: var(--border); margin: 8px 14px; }
+
+        /* Sidebar sign out at bottom */
+        .officer-signout {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; margin: 4px 8px 12px;
+            border-radius: 8px;
+            font-family: var(--font-body); font-size: 13.5px;
+            color: var(--red-danger);
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .officer-signout:hover { background: rgba(192,57,43,0.08); color: var(--red-danger); }
+
+        /* ─── MAIN CONTENT ──────────────────────────── */
+        .officer-main-wrapper {
+            padding-top: 64px;
+            margin-left: 220px;
+            min-height: 100vh;
+            transition: margin-left 0.3s;
+        }
+        @media (max-width: 767px) { .officer-main-wrapper { margin-left: 0; } }
+        @media (min-width: 768px) and (max-width: 1023px) { .officer-main-wrapper { margin-left: 220px; } }
+
+        .officer-page { padding: 24px; max-width: 1400px; }
+        @media (max-width: 767px) { .officer-page { padding: 16px; } }
+
+        /* ─── CONTEXT PANEL (right, desktop only) ───── */
+        .officer-context-panel {
+            width: 280px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        @media (max-width: 1279px) { .officer-context-panel { display: none; } }
+
+        /* ─── TOAST / FLASH ─────────────────────────── */
+        .officer-flash { padding: 12px 16px; border-radius: 10px; font-size: 0.875rem; margin-bottom: 16px; }
+        .officer-flash.success { background: rgba(46,125,82,0.1); border-left: 4px solid var(--green-safe); color: var(--text-primary); }
+        .officer-flash.danger  { background: rgba(192,57,43,0.1);  border-left: 4px solid var(--red-danger);  color: var(--text-primary); }
+        .officer-flash.warning { background: rgba(183,121,31,0.1); border-left: 4px solid var(--amber-watch); color: var(--text-primary); }
+        .officer-flash.info    { background: var(--bg-input); border-left: 4px solid var(--navy); color: var(--text-primary); }
+
+        /* ─── KPI CARDS ─────────────────────────────── */
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .kpi-number {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            color: var(--navy);
+            line-height: 1;
+            margin: 0;
+        }
+        .kpi-label {
+            font-family: var(--font-body);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .kpi-sub { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        /* ─── OFFICER TABLE ─────────────────────────── */
+        .officer-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .officer-table th {
+            padding: 10px 14px; font-family: var(--font-body); font-weight: 600;
+            font-size: 12px; color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+            background: var(--bg-subtle); white-space: nowrap;
+        }
+        .officer-table td {
+            padding: 12px 14px; font-family: var(--font-body); font-size: 14px;
+            color: var(--text-primary); border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .officer-table tr:hover td { background: var(--bg-subtle); }
+        .officer-table tr:last-child td { border-bottom: none; }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 999px;
+            font-family: var(--font-body); font-size: 12px; font-weight: 600;
+        }
+        .status-badge.active   { background: rgba(46,125,82,0.12);  color: var(--green-safe); }
+        .status-badge.pending  { background: rgba(183,121,31,0.12); color: var(--amber-watch); }
+        .status-badge.inactive { background: var(--bg-input); color: var(--text-muted); }
+        .status-badge.rejected { background: rgba(192,57,43,0.12); color: var(--red-danger); }
+
+        /* ─── MOBILE BOTTOM NAV (officer) ───────────── */
+        .officer-mobile-nav {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0;
+            height: 64px; background: var(--bg-card);
+            border-top: 1px solid var(--border); z-index: 900;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        @media (max-width: 767px) { .officer-mobile-nav { display: flex; } }
+        .officer-mobile-nav a {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 2px; text-decoration: none; color: var(--text-muted);
+            font-family: var(--font-mono); font-size: 0.6rem; padding: 6px 0;
+            transition: color 0.2s;
+        }
+        .officer-mobile-nav a.active, .officer-mobile-nav a:hover { color: var(--teal); }
+        .officer-mobile-nav a i { width: 20px; height: 20px; }
+
+        /* ─── Pending approval banner ────────────────── */
+        .pending-banner {
+            background: rgba(183,121,31,0.1);
+            border-left: 4px solid var(--amber-watch);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            animation: pendingPulse 3s ease-in-out infinite;
+        }
+        @keyframes pendingPulse { 0%,100% { opacity:1; } 50% { opacity:0.85; } }
+
+        /* ─── Activity Feed ─────────────────────────── */
+        .activity-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+        }
+        .activity-text { font-family: var(--font-body); font-size: 13px; color: var(--text-primary); line-height: 1.4; }
+        .activity-time { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); white-space: nowrap; margin-left: auto; flex-shrink: 0; }
+
+        /* ─── Card component ────────────────────────── */
+        .officer-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .officer-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px;
+        }
+        .officer-card-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            color: var(--navy);
+            margin: 0;
+        }
+        .officer-card-body { padding: 20px; }
+
+        /* ─── Greeting Banner ───────────────────────── */
+        .officer-greeting {
+            border-left: 4px solid var(--teal);
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-subtle));
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+        .officer-greeting-name {
+            font-family: var(--font-display);
+            font-style: italic;
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            color: var(--text-primary);
+            margin: 0 0 4px;
+        }
+        .officer-greeting-sub { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+
+        /* Officer Quick Action Buttons */
+        .quick-action-btn {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 16px; border-radius: 10px;
+            background: var(--bg-input); border: 1px solid var(--border);
+            font-family: var(--font-body); font-size: 14px; font-weight: 500;
+            color: var(--text-primary); text-decoration: none;
+            transition: all 0.2s; cursor: pointer; width: 100%;
+        }
+        .quick-action-btn:hover { background: var(--navy); color: white; border-color: var(--navy); }
+
+        /* Scrollbar styling */
+        .officer-sidebar::-webkit-scrollbar { width: 4px; }
+        .officer-sidebar::-webkit-scrollbar-track { background: transparent; }
+        .officer-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     OFFICER TOPBAR
+═══════════════════════════════════════════ -->
+<header class="officer-topbar">
+    <!-- Hamburger (mobile) -->
+    <button class="officer-hamburger" onclick="toggleOfficerSidebar()" aria-label="Toggle sidebar">
+        <i data-lucide="menu" style="width:22px; height:22px;"></i>
+    </button>
+
+    <!-- Logo -->
+    <a href="{{ url_for('officer.dashboard') }}" class="officer-topbar-logo">
+        <img src="{{ url_for('static', filename='img/logo-light.png') }}" alt="ROPIAS" style="filter: brightness(0) invert(1) opacity(0.9);">
+    </a>
+    <span class="officer-topbar-label d-none d-md-block">Officer Panel</span>
+
+    <div class="officer-topbar-spacer"></div>
+
+    <!-- Pending Badge -->
+    <a href="{{ url_for('officer.pending_farmers') }}" class="pending-badge {% if pending_count == 0 %}hidden{% endif %}" id="pendingTopBadge">
+        ● {{ pending_count }} Pending
+    </a>
+
+    <!-- Theme Toggle -->
+    <button class="topbar-theme-btn d-none d-md-flex" onclick="cycleTheme()">
+        <i data-lucide="monitor" id="topbar-theme-icon" style="width:14px; height:14px;"></i>
+    </button>
+
+    <!-- Profile Dropdown -->
+    <div class="officer-profile-wrapper">
+        <div class="officer-avatar" onclick="toggleOfficerDropdown()" title="{{ current_user.full_name }}">
+            {{ current_user.avatar_initials or (current_user.full_name[:2].upper() if current_user.is_authenticated else 'OA') }}
+        </div>
+        <div class="officer-dropdown" id="officerDropdown">
+            <div class="officer-dropdown-header">
+                <div class="officer-dropdown-name">{{ current_user.full_name if current_user.is_authenticated else 'Officer' }}</div>
+                <div class="officer-dropdown-role">🔬 Extension Officer · ROPIAS</div>
+            </div>
+            <a href="{{ url_for('officer.system_status') }}" class="officer-dropdown-item">
+                <i data-lucide="settings" style="width:16px;"></i> System Settings
+            </a>
+            <div class="officer-dropdown-divider"></div>
+            <a href="{{ url_for('auth.logout') }}" class="officer-dropdown-item danger" onclick="return confirm('Sign out of ROPIAS Officer Panel?')">
+                <i data-lucide="log-out" style="width:16px;"></i> Sign Out
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Sidebar backdrop (mobile) -->
+<div class="officer-sidebar-backdrop" id="officerSidebarBackdrop" onclick="closeOfficerSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════
+     LEFT NAVIGATION SIDEBAR
+═══════════════════════════════════════════ -->
+<aside class="officer-sidebar" id="officerSidebar">
+
+    <!-- Officer Info Card -->
+    <div class="officer-info-card">
+        <div class="officer-info-name">{{ current_user.full_name if current_user.is_authenticated else 'Officer' }}</div>
+        <div class="officer-info-role">Extension Officer</div>
+        <div class="officer-info-org">KCA University · ROPIAS</div>
+    </div>
+
+    <nav class="flex-grow-1">
+        <!-- Overview -->
+        <a href="{{ url_for('officer.dashboard') }}" class="officer-nav-link {% if request.endpoint == 'officer.dashboard' %}active{% endif %}">
+            <i data-lucide="layout-dashboard"></i> Overview
+        </a>
+
+        <!-- FARMERS -->
+        <div class="nav-section-label">── Farmers</div>
+        <a href="{{ url_for('officer.farmer_list') }}" class="officer-nav-link {% if request.endpoint == 'officer.farmer_list' %}active{% endif %}">
+            <i data-lucide="users"></i> All Farmers
+            {% if pending_count > 0 %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
+        </a>
+        <a href="{{ url_for('officer.pending_farmers') }}" class="officer-nav-link {% if request.endpoint == 'officer.pending_farmers' %}active{% endif %}">
+            <i data-lucide="clock"></i> Pending Approvals
+            {% if pending_count > 0 %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
+        </a>
+        <a href="{{ url_for('officer.new_farmer') }}" class="officer-nav-link {% if request.endpoint == 'officer.new_farmer' %}active{% endif %}">
+            <i data-lucide="user-plus"></i> Register Farmer
+        </a>
+        <a href="{{ url_for('officer.farm_map') }}" class="officer-nav-link {% if request.endpoint == 'officer.farm_map' %}active{% endif %}">
+            <i data-lucide="map"></i> Farm Map
+        </a>
+
+        <!-- ANALYSIS -->
+        <div class="nav-section-label">── Analysis</div>
+        <a href="{{ url_for('officer.run_analysis') }}" class="officer-nav-link {% if request.endpoint == 'officer.run_analysis' %}active{% endif %}">
+            <i data-lucide="flask-conical"></i> Run Analysis
+        </a>
+        <a href="{{ url_for('officer.regional_reports') }}" class="officer-nav-link {% if request.endpoint == 'officer.regional_reports' %}active{% endif %}">
+            <i data-lucide="bar-chart-3"></i> Regional Reports
+        </a>
+        <a href="{{ url_for('officer.compare_farms') }}" class="officer-nav-link {% if request.endpoint == 'officer.compare_farms' %}active{% endif %}">
+            <i data-lucide="git-compare"></i> Multi-Farm Compare
+        </a>
+        <a href="{{ url_for('officer.seasonal_calendar') }}" class="officer-nav-link {% if request.endpoint == 'officer.seasonal_calendar' %}active{% endif %}">
+            <i data-lucide="calendar"></i> Seasonal Calendar
+        </a>
+
+        <!-- COMMUNICATIONS -->
+        <div class="nav-section-label">── Communications</div>
+        <a href="{{ url_for('officer.alert_log') }}" class="officer-nav-link {% if request.endpoint == 'officer.alert_log' %}active{% endif %}">
+            <i data-lucide="bell"></i> Alert Centre
+        </a>
+        <a href="{{ url_for('officer.message_log') }}" class="officer-nav-link {% if request.endpoint == 'officer.message_log' %}active{% endif %}">
+            <i data-lucide="message-square"></i> Message Log
+        </a>
+
+        <!-- DATA -->
+        <div class="nav-section-label">── Data</div>
+        <a href="{{ url_for('officer.analytics') }}" class="officer-nav-link {% if request.endpoint == 'officer.analytics' %}active{% endif %}">
+            <i data-lucide="trending-up"></i> Analytics
+        </a>
+        <a href="{{ url_for('officer.nasa_explorer') }}" class="officer-nav-link {% if request.endpoint == 'officer.nasa_explorer' %}active{% endif %}">
+            <i data-lucide="satellite"></i> NASA Data Explorer
+        </a>
+        <a href="{{ url_for('officer.export_centre') }}" class="officer-nav-link {% if request.endpoint == 'officer.export_centre' %}active{% endif %}">
+            <i data-lucide="download"></i> Export Centre
+        </a>
+        <a href="{{ url_for('officer.query_log') }}" class="officer-nav-link {% if request.endpoint == 'officer.query_log' %}active{% endif %}">
+            <i data-lucide="search"></i> Query History
+        </a>
+
+        <!-- SYSTEM -->
+        <div class="nav-section-label">── System</div>
+        <a href="{{ url_for('officer.system_status') }}" class="officer-nav-link {% if request.endpoint == 'officer.system_status' %}active{% endif %}">
+            <i data-lucide="settings"></i> System Settings
+        </a>
+        <a href="{{ url_for('officer.audit_log_page') }}" class="officer-nav-link {% if request.endpoint == 'officer.audit_log_page' %}active{% endif %}">
+            <i data-lucide="clipboard-list"></i> Audit Log
+        </a>
+        <a href="{{ url_for('officer.system_health') }}" class="officer-nav-link {% if request.endpoint == 'officer.system_health' %}active{% endif %}">
+            <i data-lucide="activity"></i> System Health
+        </a>
+    </nav>
+
+    <div class="sidebar-divider"></div>
+    <a href="{{ url_for('auth.logout') }}" class="officer-signout" onclick="return confirm('Sign out of ROPIAS?')">
+        <i data-lucide="log-out" style="width:16px; height:16px;"></i> Sign Out
+    </a>
+</aside>
+
+<!-- ═══════════════════════════════════════════
+     MAIN CONTENT WRAPPER
+═══════════════════════════════════════════ -->
+<div class="officer-main-wrapper">
+    <div class="officer-page">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="officer-flash {{ category }} d-flex align-items-start gap-2">
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="officer-mobile-nav">
+    <a href="{{ url_for('officer.dashboard') }}" class="{% if request.endpoint == 'officer.dashboard' %}active{% endif %}">
+        <i data-lucide="layout-dashboard"></i><span>Overview</span>
+    </a>
+    <a href="{{ url_for('officer.farmer_list') }}" class="{% if request.endpoint == 'officer.farmer_list' %}active{% endif %}">
+        <i data-lucide="users"></i><span>Farmers</span>
+    </a>
+    <a href="{{ url_for('officer.run_analysis') }}" class="{% if request.endpoint == 'officer.run_analysis' %}active{% endif %}">
+        <i data-lucide="flask-conical"></i><span>Analyze</span>
+    </a>
+    <a href="{{ url_for('officer.alert_log') }}" class="{% if request.endpoint == 'officer.alert_log' %}active{% endif %}">
+        <i data-lucide="bell"></i><span>Alerts</span>
+    </a>
+    <a href="{{ url_for('officer.system_status') }}" class="{% if request.endpoint == 'officer.system_status' %}active{% endif %}">
+        <i data-lucide="settings"></i><span>Settings</span>
+    </a>
+</nav>
+
+<!-- Theme toggle fixed -->
+<button style="position:fixed; bottom:80px; right:16px; z-index:8000; padding:10px 14px; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border); border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px;" onclick="cycleTheme()" class="d-md-none shadow-sm">
+    <i data-lucide="monitor" id="mobile-theme-icon" style="width:14px; height:14px;"></i>
+</button>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    lucide.createIcons();
+
+    // ── Sidebar ────────────────────────────────────
+    function toggleOfficerSidebar() {
+        document.getElementById('officerSidebar').classList.toggle('open');
+        document.getElementById('officerSidebarBackdrop').classList.toggle('open');
+    }
+    function closeOfficerSidebar() {
+        document.getElementById('officerSidebar').classList.remove('open');
+        document.getElementById('officerSidebarBackdrop').classList.remove('open');
+    }
+
+    // ── Profile Dropdown ───────────────────────────
+    function toggleOfficerDropdown() {
+        document.getElementById('officerDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+        const wrapper = document.querySelector('.officer-profile-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            document.getElementById('officerDropdown').classList.remove('open');
+        }
+    });
+
+    // ── Theme Cycle ────────────────────────────────
+    const THEMES = ['system', 'light', 'dark'];
+    function cycleTheme() {
+        let current = localStorage.getItem('ropias-theme') || 'system';
+        let next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+        localStorage.setItem('ropias-theme', next);
+        if (next === 'system') {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', next);
+        }
+    }
+
+    // ── Update pending badge ───────────────────────
+    function refreshPendingBadge() {
+        fetch('/api/officer/pending-count')
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('pendingTopBadge');
+                if (badge) {
+                    if (data.count > 0) {
+                        badge.textContent = '● ' + data.count + ' Pending';
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+                // Also update sidebar badges
+                document.querySelectorAll('.nav-badge').forEach(b => {
+                    b.textContent = data.count;
+                    b.style.display = data.count > 0 ? 'inline-block' : 'none';
+                });
+            }).catch(() => {});
+    }
+    setInterval(refreshPendingBadge, 60000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

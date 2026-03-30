@@ -9,8 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Favicon -->
+    
+    <!-- Favicon — applied to ALL pages via base template -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.png') }}">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -23,19 +25,19 @@
         [data-theme="dark"] .base-logo-dark { display: block !important; }
     </style>
     
-    <!-- Bootstrap grid system + utility basis (Requested specifically for layout mapping alongside custom CSS var architecture) -->
+    <!-- Bootstrap grid system + utility basis -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Tailwind Config for precise spacing overrides inside Bootstrap elements without conflicting -->
+    <!-- Tailwind for precise overrides -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Application CSS -->
     <link href="{{ url_for('static', filename='css/ropias.css') }}" rel="stylesheet">
 
-    <!-- Immediate Theme Injection protecting against flash-of-unstyled-content -->
+    <!-- Immediate Theme Injection (prevents flash-of-unstyled-content) -->
     <script>
         (function() {
             const saved = localStorage.getItem('ropias-theme') || 'system';
@@ -47,6 +49,181 @@
             }
         })();
     </script>
+
+    <style>
+        /* ─── Responsive Base Layout ─────────────────── */
+        .ropias-topbar {
+            height: 64px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 240px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            z-index: 900;
+            top: 64px;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+
+        /* Main content offset */
+        #main-content {
+            margin-left: 240px;
+            overflow-y: auto;
+            min-height: calc(100vh - 64px);
+        }
+
+        @media (max-width: 767px) {
+            #sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                position: fixed;
+                top: 64px;
+                left: 0;
+                height: calc(100vh - 64px);
+                z-index: 950;
+            }
+            #sidebar.open { transform: translateX(0); }
+            #sidebar-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                top: 64px;
+                background: rgba(0,0,0,0.4);
+                z-index: 940;
+            }
+            #sidebar-backdrop.open { display: block; }
+            #main-content {
+                margin-left: 0 !important;
+                padding-bottom: 80px; /* space for bottom nav */
+            }
+        }
+
+        /* ─── Profile Dropdown ───────────────────────── */
+        .profile-dropdown-wrapper {
+            position: relative;
+        }
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--navy);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-weight: 700;
+            font-size: 13px;
+            transition: box-shadow 0.2s;
+            user-select: none;
+            border: 2px solid transparent;
+        }
+        .profile-avatar:hover { box-shadow: 0 0 0 3px rgba(86,124,141,0.3); border-color: var(--teal); }
+        
+        .profile-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 200px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 8px;
+            z-index: 2000;
+            display: none;
+            animation: dropdownIn 0.15s ease;
+        }
+        .profile-dropdown.open { display: block; }
+        @keyframes dropdownIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .profile-dropdown-header {
+            padding: 10px 12px 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 6px;
+        }
+        .profile-dropdown-name {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .profile-dropdown-role {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--teal);
+        }
+        .profile-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: background 0.15s;
+            cursor: pointer;
+        }
+        .profile-dropdown-item:hover { background: var(--bg-subtle); color: var(--text-primary); }
+        .profile-dropdown-item.danger { color: var(--red-danger); }
+        .profile-dropdown-item.danger:hover { background: rgba(192,57,43,0.08); }
+        .profile-dropdown-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+        /* ─── Hamburger (mobile only) ─────────────────── */
+        .hamburger-btn {
+            background: none;
+            border: none;
+            padding: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+            display: none;
+        }
+        @media (max-width: 767px) { .hamburger-btn { display: flex; align-items: center; } }
+
+        /* ─── Bottom Mobile Nav ────────────────────────── */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            z-index: 900;
+            display: none;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        @media (max-width: 767px) { .mobile-bottom-nav { display: flex; } }
+        .mobile-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            padding: 6px 0;
+            transition: color 0.2s;
+        }
+        .mobile-nav-item.active, .mobile-nav-item:hover { color: var(--teal); }
+        .mobile-nav-item i { width: 20px; height: 20px; }
+    </style>
 </head>
 <body>
 
@@ -76,34 +253,63 @@
         <span id="theme-label" class="font-mono text-xs font-medium ms-2">System</span>
     </button>
 
-    <!-- TOPBAR -->
-    <nav class="fixed-top ropias-topbar border-bottom d-flex align-items-center px-4" style="height: 60px; border-color: var(--border);">
-        <div class="d-flex w-100 justify-content-between align-items-center">
-            
-            <!-- Left: Logo -->
-            <a href="/" class="d-flex align-items-center gap-3 text-decoration-none">
-                <img src="{{ url_for('static', filename='img/logo-light.png') }}" class="base-logo-light" style="height: 28px; width: auto;" alt="ROPIAS">
-                <img src="{{ url_for('static', filename='img/logo-dark.png') }}" class="base-logo-dark" style="height: 28px; width: auto;" alt="ROPIAS">
-            </a>
+    <!-- Sidebar Backdrop (mobile) -->
+    <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
-            <!-- Center: Greeting (Desktop) -->
-            <div class="d-none d-md-block text-center flex-grow-1 greeting-banner" style="opacity:0;">
-                <span class="font-display fst-italic fw-normal" style="color: var(--teal); font-size: 1.1rem;">Habari, {{ current_user.full_name.split(' ')[0] if current_user.is_authenticated else 'Farmer' }}</span>
+    <!-- TOPBAR -->
+    <nav class="fixed-top ropias-topbar d-flex align-items-center px-3 px-md-4">
+        <div class="d-flex w-100 justify-content-between align-items-center gap-3">
+            
+            <!-- Left: Hamburger (mobile) + Logo -->
+            <div class="d-flex align-items-center gap-2">
+                <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+                    <i data-lucide="menu" style="width:22px; height:22px;"></i>
+                </button>
+                <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
+                    <img src="{{ url_for('static', filename='img/logo-light.png') }}" class="base-logo-light" style="height: 44px; width: auto;" alt="ROPIAS">
+                    <img src="{{ url_for('static', filename='img/logo-dark.png') }}" class="base-logo-dark" style="height: 44px; width: auto;" alt="ROPIAS">
+                </a>
             </div>
 
-            <!-- Right: Assets -->
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-none d-sm-flex px-3 py-1 rounded-pill font-body fw-medium" style="background-color: var(--bg-input); color: var(--text-primary); font-size: 13px;">
-                    🌽 Maize
+            <!-- Center: Greeting (Desktop) -->
+            <div class="d-none d-lg-block text-center flex-grow-1 greeting-banner" style="opacity:0;">
+                <span class="font-display fst-italic fw-normal" style="color: var(--teal); font-size: 1.05rem;">Habari, {{ current_user.full_name.split(' ')[0] if current_user.is_authenticated else 'Farmer' }}</span>
+            </div>
+
+            <!-- Right: Crop badge + Notifications + Profile Dropdown -->
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <div class="d-none d-sm-flex px-3 py-1 rounded-pill font-body fw-medium" style="background-color: var(--bg-input); color: var(--text-primary); font-size: 12px; white-space:nowrap;">
+                    🌱 {{ current_user.preferred_crop|title if current_user.is_authenticated and current_user.preferred_crop else 'Farm' }}
                 </div>
                 
-                <div class="position-relative cursor-pointer">
+                <div class="position-relative" style="cursor:pointer;">
                     <i data-lucide="bell" style="width:20px; height:20px; color:var(--text-secondary);"></i>
                     <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px;"></span>
                 </div>
 
-                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 36px; height: 36px; background-color: var(--navy); color: var(--white); cursor: pointer;" title="Profile">
-                    <span class="font-body fw-bold" style="font-size: 13px;">{% if current_user.is_authenticated %}{{ current_user.full_name.split()[0][0]|upper }}{{ current_user.full_name.split()[1][0]|upper if current_user.full_name.split()|length > 1 else '' }}{% else %}U{% endif %}</span>
+                <!-- Profile Dropdown -->
+                <div class="profile-dropdown-wrapper">
+                    <div class="profile-avatar" id="profileAvatarBtn" onclick="toggleProfileDropdown()" title="Profile">
+                        {% if current_user.is_authenticated %}
+                            {{ current_user.full_name.split()[0][0]|upper }}{{ current_user.full_name.split()[1][0]|upper if current_user.full_name.split()|length > 1 else '' }}
+                        {% else %}U{% endif %}
+                    </div>
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="profile-dropdown-header">
+                            <div class="profile-dropdown-name">{{ current_user.full_name if current_user.is_authenticated else 'User' }}</div>
+                            <div class="profile-dropdown-role">🌾 Farmer · ROPIAS</div>
+                        </div>
+                        <a href="{{ url_for('farmer.profile') }}" class="profile-dropdown-item">
+                            <i data-lucide="user" style="width:16px; height:16px;"></i> My Profile
+                        </a>
+                        <a href="{{ url_for('farmer.settings') }}" class="profile-dropdown-item">
+                            <i data-lucide="settings" style="width:16px; height:16px;"></i> Settings
+                        </a>
+                        <div class="profile-dropdown-divider"></div>
+                        <a href="{{ url_for('auth.logout') }}" class="profile-dropdown-item danger" onclick="return confirm('Sign out of ROPIAS?')">
+                            <i data-lucide="log-out" style="width:16px; height:16px;"></i> Sign Out
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -111,38 +317,40 @@
     </nav>
 
     <!-- MAIN CONTAINER -->
-    <div class="d-flex" style="padding-top: 60px; height: 100vh;">
+    <div style="padding-top: 64px; min-height: 100vh;">
         
-        <!-- SIDEBAR (Desktop) -->
-        <aside id="sidebar" class="d-none d-md-flex flex-column border-end position-fixed h-100 pb-5" style="width: 240px; background-color: var(--bg-card); border-color: var(--border)!important; z-index: 900;">
+        <!-- SIDEBAR (slides in on mobile) -->
+        <aside id="sidebar" class="position-fixed flex-column border-end pb-5 d-flex flex-column">
             
             <div class="m-3 p-3 rounded" style="background-color: var(--bg-subtle);">
                 <div class="font-body fw-medium text-truncate" style="color: var(--text-primary); font-size: 15px;">📍 {{ current_user.full_name if current_user.is_authenticated else 'Field User' }}</div>
-                <div class="font-body fw-normal text-muted mb-2 text-truncate" style="font-size: 13px;">Western Kenya Region</div>
-                <div class="font-mono text-truncate" style="font-size: 11px; color: var(--teal);">0.2800°N, 34.7500°E</div>
+                <div class="font-body fw-normal text-muted mb-1 text-truncate" style="font-size: 12px;">{{ current_user.region or 'Kenya' if current_user.is_authenticated else 'Kenya' }}</div>
+                {% if current_user.is_authenticated and current_user.farm_latitude %}
+                <div class="font-mono text-truncate" style="font-size: 11px; color: var(--teal);">{{ "%.4f"|format(current_user.farm_latitude) }}°N, {{ "%.4f"|format(current_user.farm_longitude) }}°E</div>
+                {% endif %}
             </div>
 
             <div class="d-flex flex-column px-2 gap-1 flex-grow-1">
-                <a href="{{ url_for('farmer.dashboard') }}" class="nav-link {% if request.endpoint == 'farmer.dashboard' %}active{% endif %}">
+                <a href="{{ url_for('farmer.dashboard') }}" class="nav-link {% if request.endpoint == 'farmer.dashboard' %}active{% endif %}" onclick="closeSidebar()">
                     <i data-lucide="home" style="width: 18px;"></i> Dashboard
                 </a>
-                <a href="{{ url_for('farmer.history') }}" class="nav-link {% if request.endpoint == 'farmer.history' %}active{% endif %}">
+                <a href="{{ url_for('farmer.history') }}" class="nav-link {% if request.endpoint == 'farmer.history' %}active{% endif %}" onclick="closeSidebar()">
                     <i data-lucide="bar-chart-2" style="width: 18px;"></i> My History
                 </a>
-                <a href="{{ url_for('farmer.crops') }}" class="nav-link {% if request.endpoint == 'farmer.crops' %}active{% endif %}">
+                <a href="{{ url_for('farmer.crops') }}" class="nav-link {% if request.endpoint == 'farmer.crops' %}active{% endif %}" onclick="closeSidebar()">
                     <i data-lucide="book-open" style="width: 18px;"></i> Crop Reference
                 </a>
-                <a href="{{ url_for('farmer.profile') }}" class="nav-link {% if request.endpoint == 'farmer.profile' %}active{% endif %}">
+                <a href="{{ url_for('farmer.profile') }}" class="nav-link {% if request.endpoint == 'farmer.profile' %}active{% endif %}" onclick="closeSidebar()">
                     <i data-lucide="user" style="width: 18px;"></i> My Profile
                 </a>
-                <a href="{{ url_for('farmer.settings') }}" class="nav-link {% if request.endpoint == 'farmer.settings' %}active{% endif %}">
+                <a href="{{ url_for('farmer.settings') }}" class="nav-link {% if request.endpoint == 'farmer.settings' %}active{% endif %}" onclick="closeSidebar()">
                     <i data-lucide="settings" style="width: 18px;"></i> Settings
                 </a>
             </div>
 
-            <div class="border-top pt-2" style="border-color: var(--border)!important;">
-                <a href="{{ url_for('auth.logout') }}" class="sidebar-logout"
-                   onclick="return confirm('Sign out of ROPIAS?')">
+            <!-- Sign Out in sidebar (desktop only — on mobile it's in settings) -->
+            <div class="d-none d-md-block border-top pt-2 px-2" style="border-color: var(--border)!important;">
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-logout" onclick="return confirm('Sign out of ROPIAS?')">
                     <i data-lucide="log-out" style="width: 16px;"></i>
                     Sign Out
                 </a>
@@ -153,44 +361,73 @@
                 </div>
                 <div class="font-mono" style="font-size: 11px; color: var(--text-muted);">NASA POWER: Sync'd</div>
             </div>
-            <!-- Bottom padding for fixed position -->
-            <div style="height: 20px;"></div>
         </aside>
 
         <!-- MAIN LAYOUT ROUTER -->
-        <main id="main-content" class="flex-grow-1" style="margin-left: 240px; overflow-y: auto;">
+        <main id="main-content" style="overflow-y: auto;">
             {% block content %}{% endblock %}
         </main>
     </div>
 
     <!-- BOTTOM NAV (Mobile) -->
-    <div class="d-md-none fixed-bottom border-top d-flex justify-content-around py-2" style="background-color: var(--bg-card); border-color: var(--border)!important; z-index: 900; padding-bottom: env(safe-area-inset-bottom);">
-        <a href="{{ url_for('farmer.dashboard') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.dashboard' %}var(--teal){% else %}var(--text-muted){% endif %};">
-            <i data-lucide="home" style="width: 20px;"></i>
-            <span class="font-mono fw-normal" style="font-size:0.65rem;">Home</span>
+    <nav class="mobile-bottom-nav">
+        <a href="{{ url_for('farmer.dashboard') }}" class="mobile-nav-item {% if request.endpoint == 'farmer.dashboard' %}active{% endif %}">
+            <i data-lucide="home"></i>
+            <span>Home</span>
         </a>
-        <a href="{{ url_for('farmer.history') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.history' %}var(--teal){% else %}var(--text-muted){% endif %};">
-            <i data-lucide="bar-chart-2" style="width: 20px;"></i>
-            <span class="font-mono fw-normal" style="font-size:0.65rem;">History</span>
+        <a href="{{ url_for('farmer.history') }}" class="mobile-nav-item {% if request.endpoint == 'farmer.history' %}active{% endif %}">
+            <i data-lucide="bar-chart-2"></i>
+            <span>History</span>
         </a>
-        <a href="{{ url_for('farmer.crops') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.crops' %}var(--teal){% else %}var(--text-muted){% endif %};">
-            <i data-lucide="book-open" style="width: 20px;"></i>
-            <span class="font-mono fw-normal" style="font-size:0.65rem;">Crops</span>
+        <a href="{{ url_for('farmer.crops') }}" class="mobile-nav-item {% if request.endpoint == 'farmer.crops' %}active{% endif %}">
+            <i data-lucide="book-open"></i>
+            <span>Crops</span>
         </a>
-        <a href="{{ url_for('farmer.profile') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: {% if request.endpoint == 'farmer.profile' %}var(--teal){% else %}var(--text-muted){% endif %};">
-            <i data-lucide="user" style="width: 20px;"></i>
-            <span class="font-mono fw-normal" style="font-size:0.65rem;">Profile</span>
+        <a href="{{ url_for('farmer.profile') }}" class="mobile-nav-item {% if request.endpoint == 'farmer.profile' %}active{% endif %}">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
         </a>
-        <a href="{{ url_for('auth.logout') }}" class="text-decoration-none d-flex flex-column align-items-center gap-1 w-100" style="color: var(--red-danger);"
-           onclick="return confirm('Sign out of ROPIAS?')">
-            <i data-lucide="log-out" style="width: 20px;"></i>
-            <span class="font-mono fw-normal" style="font-size:0.65rem;">Sign Out</span>
+        <!-- Settings (logout is inside settings page on mobile) -->
+        <a href="{{ url_for('farmer.settings') }}" class="mobile-nav-item {% if request.endpoint == 'farmer.settings' %}active{% endif %}">
+            <i data-lucide="settings"></i>
+            <span>Settings</span>
         </a>
-    </div>
+    </nav>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='js/ropias.js') }}"></script>
+    
+    <script>
+        // ── Sidebar Toggle (mobile) ────────────────────
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            sidebar.classList.toggle('open');
+            backdrop.classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-backdrop').classList.remove('open');
+        }
+
+        // ── Profile Dropdown ───────────────────────────
+        function toggleProfileDropdown() {
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            const wrapper = document.querySelector('.profile-dropdown-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('profileDropdown').classList.remove('open');
+            }
+        });
+
+        // ── Re-initialize Lucide after DOM ready ───────
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+    
     {% block scripts %}{% endblock %}
 
 </body>

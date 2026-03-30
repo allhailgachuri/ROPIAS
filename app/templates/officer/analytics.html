@@ -1,104 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROPIAS Admin | ML Analytics</title>
-    <!-- Fonts & CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ropias.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .admin-wrapper { max-width: 1400px; margin: 0 auto; padding-top: 2rem; }
-        .dashboard-nav a { color: var(--navy); text-decoration: none; font-weight: 500; margin-right: 1.5rem; opacity: 0.7; transition: 0.2s; }
-        .dashboard-nav a:hover, .dashboard-nav a.active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--teal); padding-bottom: 0.4rem; }
-        
-        .metric-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: center; }
-        .metric-value { font-family: 'Playfair Display', serif; font-size: 3rem; color: var(--teal); font-weight: 600; line-height: 1; margin-bottom: 0.5rem; }
-        .metric-label { font-size: 0.9rem; color: var(--navy); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin: 0; }
-        
-        .confusion-matrix { border-collapse: separate; border-spacing: 4px; width: 100%; border-radius: 12px; overflow: hidden; }
-        .confusion-matrix td, .confusion-matrix th { padding: 1.5rem; text-align: center; font-weight: 500; }
-        .cm-header { background-color: var(--navy); color: white; }
-        .cm-true { background-color: #e8f4f0; color: #0d5138; }
-        .cm-false { background-color: #fbecec; color: #842029; }
-    </style>
-</head>
-<body style="background-color: #F5EFEB;">
-
-<div class="admin-wrapper px-4 px-md-5 mb-5">
-    
-    <!-- Admin Navigation -->
-    <header class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="var(--teal)" class="bi bi-cloud-rain-fill" viewBox="0 0 16 16"><path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/></svg>
-            <h2 class="mb-0" style="font-family:'Playfair Display', serif; color: var(--navy);">Admin Console</h2>
-        </div>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">Logout</a>
-    </header>
-
-    <div class="dashboard-nav mb-5">
-        <a href="{{ url_for('officer.dashboard') }}">Overview</a>
-        <a href="{{ url_for('officer.farmer_list') }}">Farmers</a>
-        <a href="{{ url_for('officer.alert_log') }}">Alerts & Messaging</a>
-        <a href="{{ url_for('officer.analytics') }}" class="active">ML Analytics</a>
-        <a href="{{ url_for('officer.system_status') }}">System Settings</a>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <!-- Key Metrics -->
-        <div class="col-md-4"><div class="metric-card"><div class="metric-value">{{ metrics.f1_score }}%</div><div class="metric-label">Global F1-Score</div></div></div>
-        <div class="col-md-4"><div class="metric-card"><div class="metric-value">{{ metrics.precision }}%</div><div class="metric-label">Precision</div></div></div>
-        <div class="col-md-4"><div class="metric-card"><div class="metric-value">{{ metrics.recall }}%</div><div class="metric-label">Recall</div></div></div>
-    </div>
-
-    <!-- Confusion Matrix -->
-    <div class="card border-0 shadow-sm rounded-4 mb-5">
-        <div class="card-header bg-white border-0 py-4 px-5">
-            <h4 class="mb-1" style="color:var(--navy); font-family:'Playfair Display', serif;">Onset Prediction Confusion Matrix</h4>
-            <p class="text-muted small mb-0">Model evaluations evaluated against ground-truth feedback from Farmers (n={{ metrics.true_positives + metrics.false_positives + metrics.true_negatives + metrics.false_negatives }})</p>
-        </div>
-        <div class="card-body px-5 pb-5 pt-0">
-            <table class="confusion-matrix">
-                <tr>
-                    <td colspan="2" rowspan="2" style="background:none;"></td>
-                    <th colspan="2" class="cm-header rounded-top">Predicted Class (ROPIAS Output)</th>
-                </tr>
-                <tr>
-                    <th class="bg-light text-dark fw-bold border">True Onset</th>
-                    <th class="bg-light text-dark fw-bold border rounded-end">False Onset</th>
-                </tr>
-                <tr>
-                    <th rowspan="2" class="cm-header rounded-start px-2"><div style="writing-mode: vertical-rl; transform: rotate(180deg); margin:auto;">Actual Class (Ground Truth)</div></th>
-                    <th class="bg-light text-dark fw-bold border">True Onset</th>
-                    <td class="cm-true rounded-start">
-                        <div class="fs-2 fw-bold">{{ metrics.true_positives }}</div>
-                        <span class="small opacity-75">True Positives</span>
-                    </td>
-                    <td class="cm-false rounded-end">
-                        <div class="fs-2 fw-bold">{{ metrics.false_negatives }}</div>
-                        <span class="small opacity-75">False Negatives (Missed)</span>
-                    </td>
-                </tr>
-                <tr>
-                    <th class="bg-light text-dark fw-bold border rounded-bottom">False Onset</th>
-                    <td class="cm-false rounded-start">
-                        <div class="fs-2 fw-bold">{{ metrics.false_positives }}</div>
-                        <span class="small opacity-75">False Positives (False Alarm)</span>
-                    </td>
-                    <td class="cm-true rounded-end">
-                        <div class="fs-2 fw-bold">{{ metrics.true_negatives }}</div>
-                        <span class="small opacity-75">True Negatives</span>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Analytics{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">📈 Analytics</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">System-wide performance metrics and agricultural intelligence</p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<!-- Impact KPIs -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="kpi-card" style="border-top:4px solid var(--green-safe);">
+            <p class="kpi-number">{{ stats.total_queries }}</p>
+            <p class="kpi-label">Total Analyses</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card" style="border-top:4px solid var(--teal);">
+            <p class="kpi-number">{{ stats.active_farmers }}</p>
+            <p class="kpi-label">Active Farmers</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card" style="border-top:4px solid var(--green-safe);">
+            <p class="kpi-number">{{ stats.true_pct }}%</p>
+            <p class="kpi-label">True Onset Rate</p>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card" style="border-top:4px solid var(--red-danger);">
+            <p class="kpi-number">{{ stats.false_pct }}%</p>
+            <p class="kpi-label">False Onset Rate</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Onset distribution Donut -->
+    <div class="col-12 col-md-6">
+        <div class="officer-card">
+            <div class="officer-card-header"><h2 class="officer-card-title">Onset Distribution</h2></div>
+            <div class="officer-card-body text-center">
+                <canvas id="donutChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly analyses -->
+    <div class="col-12 col-md-6">
+        <div class="officer-card">
+            <div class="officer-card-header"><h2 class="officer-card-title">Monthly Activity</h2></div>
+            <div class="officer-card-body">
+                <canvas id="monthlyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop distribution -->
+    <div class="col-12 col-md-6">
+        <div class="officer-card">
+            <div class="officer-card-header"><h2 class="officer-card-title">Crop Distribution</h2></div>
+            <div class="officer-card-body">
+                <canvas id="cropChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Soil moisture trend -->
+    <div class="col-12 col-md-6">
+        <div class="officer-card">
+            <div class="officer-card-header"><h2 class="officer-card-title">Average Soil Moisture Trend</h2></div>
+            <div class="officer-card-body">
+                <canvas id="moistureTrend" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fontMono = "'JetBrains Mono', monospace";
+const fmtGrid = 'rgba(47,65,86,0.06)';
+const fmtTick = { font: { family: fontMono, size: 9 } };
+
+// Donut
+new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['True Onset', 'False Onset', 'Uncertain'],
+        datasets: [{ data: [{{ stats.true_onsets }}, {{ stats.false_onsets }}, {{ stats.uncertain_onsets }}],
+            backgroundColor: ['#2E7D52', '#C0392B', '#B7791F'],
+            borderWidth: 0, hoverOffset: 8
+        }]
+    },
+    options: { responsive:true, cutout:'70%', plugins:{ legend:{ labels:{ font:{family:fontMono, size:10} }}}}
+});
+
+// Monthly chart
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ monthly_labels|tojson }},
+        datasets: [{ label:'Analyses', data: {{ monthly_data|tojson }}, backgroundColor:'rgba(86,124,141,0.7)', borderRadius:4 }]
+    },
+    options: { responsive:true, scales:{ x:{ ticks:fmtTick, grid:{color:fmtGrid} }, y:{ ticks:fmtTick, grid:{color:fmtGrid} }}}
+});
+
+// Crop distribution
+new Chart(document.getElementById('cropChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ crop_labels|tojson }},
+        datasets: [{ label:'Farmers', data: {{ crop_data|tojson }}, backgroundColor:'rgba(46,125,82,0.7)', borderRadius:4 }]
+    },
+    options: { indexAxis:'y', responsive:true, scales:{ x:{ ticks:fmtTick, grid:{color:fmtGrid} }, y:{ ticks:fmtTick, grid:{ display:false } }}}
+});
+
+// Moisture trend
+new Chart(document.getElementById('moistureTrend'), {
+    type: 'line',
+    data: {
+        labels: {{ moisture_labels|tojson }},
+        datasets: [{ label:'Avg Soil %', data: {{ moisture_data|tojson }}, borderColor:'#2F4156', backgroundColor:'rgba(47,65,86,0.08)', borderWidth:2, fill:true, tension:0.4, pointRadius:2 }]
+    },
+    options: { responsive:true, scales:{ x:{ ticks:fmtTick, grid:{color:fmtGrid} }, y:{ min:0, max:100, ticks:fmtTick, grid:{color:fmtGrid} }}}
+});
+</script>
+{% endblock %}

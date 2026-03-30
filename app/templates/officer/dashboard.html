@@ -1,262 +1,311 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROPIAS | Admin Dashboard</title>
-    
-    <!-- Required Preconnects -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Custom Brand CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ropias.css') }}">
-    <style>
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease;
-        }
-        .stats-card:hover { transform: translateY(-3px); }
-        .stats-number {
-            font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
-            color: #2F4156;
-            margin: 0;
-            line-height: 1;
-        }
-        .stats-label {
-            font-family: 'Source Sans 3', sans-serif;
-            color: #567C8D;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-top: 0.5rem;
-        }
-    </style>
-</head>
-<body>
+{% extends "officer/base_officer.html" %}
 
-<div class="container-fluid px-4 px-md-5 mt-3 mb-5" style="max-width: 1400px; margin: 0 auto;">
-    
-    <header class="app-header d-flex justify-content-between align-items-center mb-0 pb-3">
-        <div class="app-brand d-flex align-items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="var(--sky)" class="bi bi-cloud-rain-fill" viewBox="0 0 16 16">
-                <path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/>
-            </svg>
-            <h1 class="logo-text mb-0">ROPIAS <span style="font-size:1rem;color:#567C8D;letter-spacing:0">Admin</span></h1>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <a href="{{ url_for('officer.pending_farmers') }}" class="btn" style="background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border); border-radius:999px; font-family:var(--font-body); font-size:0.9rem;">
-                Pending Approvals <span class="badge bg-danger ms-1" id="pendingBadge" style="display:none;"></span>
-            </a>
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger rounded-pill px-4 shadow-sm">
-                Logout
-            </a>
-        </div>
-    </header>
+{% block title %}ROPIAS | Officer Overview{% endblock %}
 
-    <!-- Officer Greeting Banner -->
-    <div class="greeting-banner officer mb-4 d-flex justify-content-between align-items-center p-4 shadow-sm rounded-4" style="background: white; border-top: 4px solid #2F4156;">
-      <div class="d-flex align-items-center gap-4">
-          <div class="greeting-avatar admin d-flex align-items-center justify-content-center text-white rounded-circle shadow-sm" style="background:#2F4156; width:60px; height:60px; font-size:1.5rem; font-weight:600;">
-              {{ current_user.avatar_initials }}
-          </div>
-          <div class="greeting-text">
-            <h2 style="font-family: 'Playfair Display', serif; color: #2F4156; font-size: 1.6rem; margin-bottom: 0.2rem;">{{ current_user.greeting }}</h2>
-            <p class="greeting-sub mb-0 text-muted" style="font-family: 'Source Sans 3', sans-serif;">
-              Officer view · <strong>{{ stats.total_farmers }}</strong> farms monitored · <strong>{{ stats.queries_today }}</strong> queries today
+{% block content %}
+<!-- ─── GREETING BANNER ─────────────────────────────── -->
+<div class="officer-greeting d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+        <div class="officer-avatar" style="width:56px; height:56px; font-size:1.3rem;">
+            {{ current_user.avatar_initials or 'OA' }}
+        </div>
+        <div>
+            <h1 class="officer-greeting-name">
+                Good {{ greeting_time }}, {{ current_user.full_name.split()[0] }}.
+            </h1>
+            <p class="officer-greeting-sub mb-0">
+                Here is today's status across all monitored farms. ·
+                <strong>{{ stats.active_farmers }}</strong> active farmers ·
+                <strong>{{ today_str }}</strong>
             </p>
-          </div>
-      </div>
-      <div class="officer-badges d-none d-md-flex gap-3">
-        <span class="badge bg-success rounded-pill px-4 py-2" style="font-size: 0.9rem;">✅ {{ stats.true_onsets }} True Onsets</span>
-        <span class="badge bg-danger rounded-pill px-4 py-2" style="font-size: 0.9rem;">🚨 {{ stats.false_onsets }} False Onsets</span>
-      </div>
-    </div>
-    
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-3">
-            <div class="stats-card text-center">
-                <p class="stats-number">{{ stats.total_farmers }}</p>
-                <p class="stats-label">Registered Farmers</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card text-center">
-                <p class="stats-number">{{ stats.queries_today }}</p>
-                <p class="stats-label">Analytics Today</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card text-center">
-                <p class="stats-number">{{ stats.alerts_sent }}</p>
-                <p class="stats-label">WhatsApp Alerts Sent</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card text-center" style="background-color: var(--teal); color: white;">
-                <p class="stats-number text-white">{{ stats.true_onsets + stats.false_onsets }}</p>
-                <p class="stats-label text-white opacity-75">Total Historic Onsets</p>
-            </div>
         </div>
     </div>
+    <div class="d-none d-md-flex gap-2">
+        <span class="status-badge active">✅ {{ stats.true_onsets }} True Onsets</span>
+        <span class="status-badge rejected">🚨 {{ stats.false_onsets }} False Onsets</span>
+    </div>
+</div>
 
-    <!-- Real-time Activity Feed -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
-        <div class="card-header bg-white border-0 py-4 px-4 d-flex justify-content-between align-items-center">
-            <h4 class="mb-0" style="font-family: 'Playfair Display', serif; color: var(--navy);">Live System Feed</h4>
-            <div class="d-flex align-items-center gap-2 text-muted" style="font-size:0.85rem;">
-                <div class="live-dot" style="width:8px; height:8px; background:var(--green-safe); border-radius:50%; animation: pulse 2s infinite;"></div> Updates dynamically
+<!-- ─── PENDING APPROVALS BANNER ──────────────────────── -->
+{% if pending_count > 0 %}
+<div class="pending-banner d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <div class="fw-bold" style="color:var(--amber-watch); font-family:var(--font-body); font-size:15px;">
+            🔔 {{ pending_count }} farmer{{ 's' if pending_count != 1 else '' }} waiting for account approval
+        </div>
+        <div style="font-family:var(--font-body); font-size:13px; color:var(--text-muted); margin-top:4px;">
+            {% for f in pending_farmers[:3] %}{{ f.full_name }} ({{ f.preferred_crop|title }}){% if not loop.last %} · {% endif %}{% endfor %}
+        </div>
+    </div>
+    <a href="{{ url_for('officer.pending_farmers') }}" class="btn" style="background:var(--amber-watch); color:white; border-radius:8px; font-family:var(--font-body); font-size:13px; padding:8px 16px; white-space:nowrap;">
+        Review Pending Farmers →
+    </a>
+</div>
+{% endif %}
+
+<!-- ─── KPI CARDS ─────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{{ url_for('officer.farmer_list') }}" class="kpi-card d-block text-decoration-none">
+            <p class="kpi-number" id="kpi-farmers">{{ stats.active_farmers }}</p>
+            <p class="kpi-label">Active Farmers</p>
+            <p class="kpi-sub" style="color:var(--green-safe);">↑ All registered</p>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{{ url_for('officer.query_log') }}" class="kpi-card d-block text-decoration-none">
+            <p class="kpi-number" id="kpi-true">{{ stats.true_onsets }}</p>
+            <p class="kpi-label">True Onsets</p>
+            <p class="kpi-sub" style="color:var(--green-safe);">✅ Safe to plant</p>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{{ url_for('officer.query_log') }}" class="kpi-card d-block text-decoration-none">
+            <p class="kpi-number" id="kpi-false">{{ stats.false_onsets }}</p>
+            <p class="kpi-label">False Onsets</p>
+            <p class="kpi-sub" style="color:var(--red-danger);">⚠ Do not plant</p>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{{ url_for('officer.pending_farmers') }}" class="kpi-card d-block text-decoration-none" {% if pending_count > 0 %}style="border-color:var(--amber-watch);"{% endif %}>
+            <p class="kpi-number" id="kpi-pending">{{ pending_count }}</p>
+            <p class="kpi-label">Pending Approvals</p>
+            {% if pending_count > 0 %}
+            <p class="kpi-sub" style="color:var(--amber-watch);">Action needed →</p>
+            {% else %}
+            <p class="kpi-sub">All clear ✓</p>
+            {% endif %}
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{{ url_for('officer.alert_log') }}" class="kpi-card d-block text-decoration-none">
+            <p class="kpi-number" id="kpi-alerts">{{ stats.alerts_sent }}</p>
+            <p class="kpi-label">Alerts Sent</p>
+            <p class="kpi-sub">📱 WhatsApp total</p>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card" style="border-color:var(--green-safe);">
+            <p class="kpi-number" style="color:var(--green-safe); font-size:1.2rem;">● Online</p>
+            <p class="kpi-label">NASA API</p>
+            <p class="kpi-sub">24hr data sync</p>
+        </div>
+    </div>
+</div>
+
+<!-- ─── TWO-COLUMN LAYOUT: MAP + CONTEXT PANEL ─────── -->
+<div class="row g-4">
+
+    <!-- LEFT: Map + Activity Feed -->
+    <div class="col-12 col-xl-8">
+
+        <!-- Leaflet Farm Map -->
+        <div class="officer-card mb-4">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">🗺 Regional Farm Map</h2>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-sm" style="font-family:var(--font-body); font-size:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px;" onclick="filterMapPins('all')">All</button>
+                    <button class="btn btn-sm" style="font-family:var(--font-body); font-size:12px; background:rgba(46,125,82,0.1); color:var(--green-safe); border-radius:6px;" onclick="filterMapPins('green')">✅ True</button>
+                    <button class="btn btn-sm" style="font-family:var(--font-body); font-size:12px; background:rgba(192,57,43,0.1); color:var(--red-danger); border-radius:6px;" onclick="filterMapPins('red')">🚨 False</button>
+                </div>
+            </div>
+            <div id="farm-map" style="height: 380px; background: var(--bg-subtle);"></div>
+        </div>
+
+        <!-- Activity Feed + Recent Analyses Table -->
+        <div class="officer-card">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">📋 Recent Analyses</h2>
+                <a href="{{ url_for('officer.query_log') }}" style="font-family:var(--font-body); font-size:13px; color:var(--teal); text-decoration:none;">View all →</a>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="officer-table">
+                    <thead>
+                        <tr>
+                            <th>Farmer</th>
+                            <th>Crop</th>
+                            <th>Onset Result</th>
+                            <th>Soil %</th>
+                            <th>When</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentAnalysisBody">
+                        {% if recent_queries %}
+                            {% for q in recent_queries %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight:600; font-size:13px;">{{ q.user.full_name if q.user else 'Unknown' }}</div>
+                                    <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">{{ q.latitude|round(3) }}°N, {{ q.longitude|round(3) }}°E</div>
+                                </td>
+                                <td style="font-size:13px;">{{ q.crop_key|title if q.crop_key else '—' }}</td>
+                                <td>
+                                    {% if q.onset_result == 'True Onset' %}
+                                        <span class="status-badge active">✅ True Onset</span>
+                                    {% elif q.onset_result == 'False Onset' %}
+                                        <span class="status-badge rejected">🚨 False Onset</span>
+                                    {% else %}
+                                        <span class="status-badge pending">⏳ {{ q.onset_result or 'None' }}</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-family:var(--font-mono); font-size:13px;">{{ (q.moisture_pct)|round(1) if q.moisture_pct else '—' }}%</td>
+                                <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">{{ q.created_at.strftime('%b %d, %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">No analyses yet. Farmers will appear here once they run their first analysis.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="card-body p-0">
-            <div id="activityFeedContainer" class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
-                <div class="text-center py-4 text-muted">
-                    <div class="spinner-border spinner-border-sm" role="status"></div> Loading live feed...
+    </div>
+
+    <!-- RIGHT: Activity Feed + Quick Actions -->
+    <div class="col-12 col-xl-4">
+
+        <!-- Live Activity Feed -->
+        <div class="officer-card mb-4">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">⚡ Live Activity</h2>
+                <div style="display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">
+                    <div style="width:6px; height:6px; border-radius:50%; background:var(--green-safe); animation:pulse-dot 2s infinite;"></div> Live
+                </div>
+            </div>
+            <div class="officer-card-body p-3" id="activityFeedContainer" style="max-height:300px; overflow-y:auto;">
+                <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                    Loading...
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Active Farmers Table -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
-        <div class="card-header bg-white border-0 py-4 px-4 d-flex justify-content-between align-items-center">
-            <h4 class="mb-0" style="font-family: 'Playfair Display', serif; color: var(--navy);">Active Farm Monitor</h4>
-            <!-- Create farmer route is expected from Part 8 -->
-            <a href="#" class="btn btn-navy rounded-pill px-4" onclick="alert('Farmer creation coming soon')">+ New Farmer</a>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light text-muted" style="font-family: 'Source Sans 3', sans-serif;">
-                    <tr>
-                        <th class="px-4 py-3 fw-normal">Farmer</th>
-                        <th class="py-3 fw-normal">Location</th>
-                        <th class="py-3 fw-normal">Crop</th>
-                        <th class="py-3 fw-normal">Status</th>
-                        <th class="px-4 py-3 fw-normal text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for farmer in farmers %}
-                    <tr>
-                        <td class="px-4 py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;font-weight:600;font-size:0.9rem;">
-                                    {{ farmer.avatar_initials }}
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 text-dark">{{ farmer.full_name }}</h6>
-                                    <small class="text-muted">{{ farmer.phone }}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="py-3 text-muted">
-                            {% if farmer.farm_latitude and farmer.farm_longitude %}
-                                {{ farmer.farm_latitude|round(3) }}, {{ farmer.farm_longitude|round(3) }}
-                            {% else %}
-                                <span class="badge bg-light text-muted border">Pending GPS</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3">
-                            <span class="badge text-dark" style="background:#F5EFEB;">{{ farmer.preferred_crop|title }}</span>
-                        </td>
-                        <td class="py-3">
-                            <span class="badge {% if farmer.whatsapp_alerts %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
-                                {% if farmer.whatsapp_alerts %}Alerts On{% else %}Alerts Off{% endif %}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-end">
-                            <form action="{{ url_for('officer.toggle_farmer', user_id=farmer.id) }}" method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                                    {% if farmer.is_active %}Disable{% else %}Enable{% endif %}
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    {% if not farmers %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">No active farmers monitored yet.</td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+        <!-- Quick Actions -->
+        <div class="officer-card">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">⚡ Quick Actions</h2>
+            </div>
+            <div class="officer-card-body p-3 d-flex flex-column gap-2">
+                <a href="{{ url_for('officer.new_farmer') }}" class="quick-action-btn">
+                    <i data-lucide="user-plus" style="width:16px; height:16px;"></i> Register New Farmer
+                </a>
+                <a href="{{ url_for('officer.alert_log') }}" class="quick-action-btn">
+                    <i data-lucide="send" style="width:16px; height:16px;"></i> Send Broadcast Alert
+                </a>
+                <a href="{{ url_for('officer.run_analysis') }}" class="quick-action-btn">
+                    <i data-lucide="flask-conical" style="width:16px; height:16px;"></i> Run Regional Analysis
+                </a>
+                <a href="{{ url_for('officer.regional_reports') }}" class="quick-action-btn">
+                    <i data-lucide="bar-chart-3" style="width:16px; height:16px;"></i> Generate Weekly Report
+                </a>
+                <a href="{{ url_for('officer.export_centre') }}" class="quick-action-btn">
+                    <i data-lucide="download" style="width:16px; height:16px;"></i> Export All Farm Data
+                </a>
+            </div>
         </div>
     </div>
 
 </div>
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    async function fetchActivityFeed() {
-        try {
-            const resp = await fetch('{{ url_for("api.activity_feed") }}');
-            if(resp.ok) {
-                const data = await resp.json();
-                const container = document.getElementById('activityFeedContainer');
-                container.innerHTML = '';
-                
-                let pendingCount = 0;
-                
-                if(data.length === 0) {
-                    container.innerHTML = '<div class="text-center py-4 text-muted">No recent activity detected.</div>';
-                } else {
-                    data.forEach(item => {
-                        if(item.type === 'registration') pendingCount++;
-                        const row = document.createElement('div');
-                        row.className = 'list-group-item px-4 py-3 d-flex justify-content-between align-items-center border-bottom';
-                        row.innerHTML = `
-                            <div class="d-flex align-items-center gap-3">
-                                <div style="font-size:1.2rem;">${item.icon}</div>
-                                <div style="font-family:'Source Sans 3', sans-serif; color:#2F4156; font-size:0.95rem;">${item.text}</div>
-                            </div>
-                            <div class="text-muted" style="font-family:monospace; font-size:0.8rem;">
-                                ${item.time_ago}
-                            </div>
-                        `;
-                        container.appendChild(row);
-                    });
-                }
-                
-                const badge = document.getElementById('pendingBadge');
-                if(pendingCount > 0) {
-                    badge.innerText = pendingCount + " New";
-                    badge.style.display = 'inline-block';
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-        } catch(e) { console.error("Feed error:", e); }
-    }
-    
-    fetchActivityFeed();
-    setInterval(fetchActivityFeed, 10000);
-</script>
+{% endblock %}
+
+{% block scripts %}
 <style>
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.85);} }
+@keyframes countUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.kpi-number { animation: countUp 0.6s ease forwards; }
 </style>
-</body>
-</html>
+<script>
+// ── Leaflet Farm Map ────────────────────────────────
+const map = L.map('farm-map', { center: [0.5, 37.0], zoom: 6, zoomControl: true });
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+let allMarkers = [];
+
+function getColor(onset_color) {
+    const c = { green: '#2E7D52', red: '#C0392B', grey: '#7A91A0', yellow: '#B7791F' };
+    return c[onset_color] || c.grey;
+}
+
+function loadFarmPins(filterColor=null) {
+    fetch('/api/officer/farm-pins')
+        .then(r => r.json())
+        .then(geo => {
+            allMarkers.forEach(m => map.removeLayer(m));
+            allMarkers = [];
+            if (!geo.features) return;
+            geo.features.forEach(f => {
+                const p = f.properties;
+                if (filterColor && p.onset_color !== filterColor && filterColor !== 'all') return;
+                const [lon, lat] = f.geometry.coordinates;
+                const marker = L.circleMarker([lat, lon], {
+                    radius: 10,
+                    fillColor: getColor(p.onset_color),
+                    color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
+                });
+                marker.bindPopup(`
+                    <div style="font-family:'DM Sans',sans-serif; min-width:180px;">
+                        <strong style="font-size:14px;">${p.name}</strong><br>
+                        <span style="font-size:12px; color:#567C8D;">Crop: ${p.crop || '—'}</span><br>
+                        <span style="font-size:12px;">Status: ${p.onset_result || 'Not analyzed'}</span><br>
+                        ${p.moisture ? `<span style="font-size:12px;">Soil: ${p.moisture}%</span><br>` : ''}
+                        <small style="color:#999;">${p.analyzed_at ? 'Updated recently' : 'Never analyzed'}</small>
+                    </div>
+                `);
+                marker.addTo(map);
+                allMarkers.push(marker);
+            });
+        }).catch(e => console.log('Farm pins error:', e));
+}
+
+function filterMapPins(color) {
+    loadFarmPins(color === 'all' ? null : color);
+}
+
+loadFarmPins();
+
+// ── Activity Feed ────────────────────────────────────
+function fetchActivityFeed() {
+    fetch('/admin/activity-feed')
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('activityFeedContainer');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">No recent activity.</div>';
+                return;
+            }
+            const colorMap = { query:'var(--teal)', registration:'var(--green-safe)', alert:'var(--amber-watch)' };
+            container.innerHTML = data.map(item => `
+                <div class="activity-item">
+                    <div class="activity-dot" style="background:${colorMap[item.type]||'var(--text-muted)'}"></div>
+                    <div class="activity-text">${item.icon || ''} ${item.text}</div>
+                    <div class="activity-time">${item.time_ago}</div>
+                </div>
+            `).join('');
+        }).catch(() => {
+            document.getElementById('activityFeedContainer').innerHTML =
+                '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Feed unavailable.</div>';
+        });
+}
+
+fetchActivityFeed();
+setInterval(fetchActivityFeed, 60000);
+
+// ── KPI count-up animation ──────────────────────────
+document.querySelectorAll('.kpi-number').forEach(el => {
+    const target = parseInt(el.textContent) || 0;
+    if (target === 0 || isNaN(target)) return;
+    let start = 0;
+    const step = Math.ceil(target / 30);
+    const interval = setInterval(() => {
+        start = Math.min(start + step, target);
+        el.textContent = (el.textContent.includes('.') || isNaN(parseInt(el.textContent))) ? el.textContent : start;
+        if (start >= target) clearInterval(interval);
+    }, 40);
+});
+
+lucide.createIcons();
+</script>
+{% endblock %}

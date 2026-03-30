@@ -1,105 +1,157 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROPIAS Admin | Onboard Farmer</title>
-    <!-- Fonts & CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ropias.css') }}">
-    <style>
-        .admin-wrapper { max-width: 1400px; margin: 0 auto; padding-top: 2rem; }
-        .dashboard-nav a { color: var(--navy); text-decoration: none; font-weight: 500; margin-right: 1.5rem; opacity: 0.7; transition: 0.2s; }
-        .dashboard-nav a:hover, .dashboard-nav a.active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--teal); padding-bottom: 0.4rem; }
-    </style>
-</head>
-<body style="background-color: #F5EFEB;">
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Register Farmer{% endblock %}
+{% block content %}
 
-<div class="admin-wrapper px-4 px-md-5 mb-5">
-    
-    <!-- Admin Navigation -->
-    <header class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="var(--teal)" class="bi bi-cloud-rain-fill" viewBox="0 0 16 16"><path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/></svg>
-            <h2 class="mb-0" style="font-family:'Playfair Display', serif; color: var(--navy);">Admin Console</h2>
-        </div>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">Logout</a>
-    </header>
-
-    <div class="dashboard-nav mb-5">
-        <a href="{{ url_for('officer.dashboard') }}">Overview</a>
-        <a href="{{ url_for('officer.farmer_list') }}" class="active">Farmers</a>
-        <a href="{{ url_for('officer.alert_log') }}">Alerts & Messaging</a>
-        <a href="{{ url_for('officer.analytics') }}">ML Analytics</a>
-        <a href="{{ url_for('officer.system_status') }}">System Settings</a>
-    </div>
-
-    <!-- Onboard Farmer Form -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5 mx-auto" style="max-width: 800px;">
-        <div class="card-header bg-white border-bottom py-4 px-4 d-flex justify-content-between align-items-center">
-            <h4 class="mb-0" style="font-family: 'Playfair Display', serif; color: var(--navy);"><i class="bi bi-person-plus-fill me-2 text-muted"></i>Onboard New Farmer</h4>
-            <a href="{{ url_for('officer.farmer_list') }}" class="btn btn-sm btn-light border rounded-pill px-3">Back to List</a>
-        </div>
-        <div class="card-body p-5">
-            <form method="POST" action="{{ url_for('officer.new_farmer') }}">
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Full Name</label>
-                        <input type="text" name="full_name" class="form-control premium-input" required placeholder="John Doe">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Username (Auto-generated if blank)</label>
-                        <input type="text" name="username" class="form-control premium-input" placeholder="john.doe">
-                    </div>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Email Address</label>
-                        <input type="email" name="email" class="form-control premium-input" required placeholder="john@example.com">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">WhatsApp Phone Number</label>
-                        <input type="text" name="phone" class="form-control premium-input" placeholder="+254700000000">
-                    </div>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Farm Latitude</label>
-                        <input type="number" step="any" name="latitude" class="form-control premium-input" placeholder="-1.2921">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Farm Longitude</label>
-                        <input type="number" step="any" name="longitude" class="form-control premium-input" placeholder="36.8219">
-                    </div>
-                </div>
-
-                <div class="row g-4 mb-5">
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Preferred Crop</label>
-                        <select name="crop" class="form-select premium-input">
-                            <option value="maize">Maize</option>
-                            <option value="beans">Beans</option>
-                            <option value="sorghum">Sorghum</option>
-                            <!-- Expansion handled dynamically if needed -->
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Initial Password</label>
-                        <input type="text" name="password" class="form-control premium-input" required placeholder="Temporary Password">
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-navy w-100 py-3 rounded-3 fw-bold fs-5">Create Farmer Profile</button>
-            </form>
-        </div>
-    </div>
-
+<div class="mb-4">
+    <a href="{{ url_for('officer.farmer_list') }}" style="color:var(--teal); text-decoration:none; font-size:14px; font-family:var(--font-body);">← Back to Farmers</a>
+    <h1 class="officer-greeting-name mt-2" style="font-size:1.8rem;">📋 Register New Farmer</h1>
+    <p class="officer-greeting-sub">Farmer accounts created here are automatically approved.</p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<div class="row g-4">
+<div class="col-12 col-lg-8">
+<form method="POST" action="{{ url_for('officer.new_farmer') }}">
+
+    <!-- Personal Details -->
+    <div class="officer-card mb-4">
+        <div class="officer-card-header"><h2 class="officer-card-title">Personal Details</h2></div>
+        <div class="officer-card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Full Name *</label>
+                    <input type="text" name="full_name" required placeholder="e.g. John Kamau"
+                        style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Email Address *</label>
+                    <input type="email" name="email" required placeholder="e.g. john@example.com"
+                        style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Phone / WhatsApp *</label>
+                    <input type="tel" name="phone" required placeholder="+254700000000"
+                        style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Region</label>
+                    <select name="region" style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                        <option value="">Select Region</option>
+                        <option>Western Kenya</option><option>Rift Valley</option><option>Nyanza</option>
+                        <option>Central</option><option>Eastern</option><option>Coast</option>
+                        <option>Nairobi</option><option>North Eastern</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Farm Details -->
+    <div class="officer-card mb-4">
+        <div class="officer-card-header"><h2 class="officer-card-title">Farm Details</h2></div>
+        <div class="officer-card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Latitude (°N)</label>
+                    <input type="number" step="any" name="latitude" id="reg-lat" placeholder="e.g. 0.2800"
+                        style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Longitude (°E)</label>
+                    <input type="number" step="any" name="longitude" id="reg-lon" placeholder="e.g. 34.7500"
+                        style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                </div>
+                <div class="col-12">
+                    <button type="button" onclick="detectGPSForRegistration()" class="quick-action-btn" style="width:auto;">
+                        <i data-lucide="crosshair" style="width:15px; height:15px;"></i> 📍 Use GPS to set location
+                    </button>
+                    <span id="gps-reg-result" style="font-family:var(--font-mono); font-size:12px; color:var(--teal); margin-left:12px;"></span>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Primary Crop *</label>
+                    <select name="crop" required style="width:100%; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                        <option value="maize">🌽 Maize (Mahindi)</option>
+                        <option value="beans">🫘 Beans (Maharagwe)</option>
+                        <option value="tea">🍵 Tea (Chai)</option>
+                        <option value="coffee">☕ Coffee (Kahawa)</option>
+                        <option value="sorghum">🌾 Sorghum (Mtama)</option>
+                        <option value="millet">🌾 Millet (Wimbi)</option>
+                        <option value="irish_potato">🥔 Irish Potato</option>
+                        <option value="sweet_potato">🍠 Sweet Potato</option>
+                        <option value="cassava">🥔 Cassava (Muhogo)</option>
+                        <option value="kale">🥬 Kale (Sukuma Wiki)</option>
+                        <option value="tomato">🍅 Tomato (Nyanya)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Setup -->
+    <div class="officer-card mb-4">
+        <div class="officer-card-header"><h2 class="officer-card-title">Account Setup</h2></div>
+        <div class="officer-card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-8">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Temporary Password</label>
+                    <div style="display:flex; gap:8px; margin-top:6px;">
+                        <input type="text" name="password" id="reg-password" placeholder="Enter or auto-generate"
+                            style="flex:1; height:46px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:13px; color:var(--text-primary);">
+                        <button type="button" onclick="generatePassword()" class="btn" style="background:var(--navy); color:white; border-radius:8px; font-family:var(--font-body); font-size:13px; white-space:nowrap; padding:0 14px;">
+                            Auto-generate
+                        </button>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--font-mono);">Must be 8+ chars with uppercase, number, and special character</div>
+                </div>
+                <div class="col-12">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-family:var(--font-body); font-size:14px;">
+                        <input type="checkbox" name="send_credentials" style="width:18px; height:18px; accent-color:var(--navy);">
+                        Send login credentials via WhatsApp immediately
+                    </label>
+                </div>
+                <div class="col-12">
+                    <div style="display:flex; align-items:center; gap:10px; padding:12px; background:rgba(46,125,82,0.08); border:1px solid rgba(46,125,82,0.2); border-radius:8px; font-family:var(--font-body); font-size:13px; color:var(--green-safe);">
+                        ✅ This account is pre-approved — the farmer can sign in immediately.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-3">
+        <button type="submit" class="btn" style="background:var(--navy); color:white; height:48px; padding:0 28px; border-radius:10px; font-family:var(--font-body); font-size:15px; font-weight:600; flex:1;">
+            ✅ Create Farmer Account
+        </button>
+        <a href="{{ url_for('officer.farmer_list') }}" class="btn" style="background:var(--bg-input); color:var(--text-primary); height:48px; padding:0 20px; border-radius:10px; font-family:var(--font-body); border:1px solid var(--border);">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function generatePassword() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    let pw = '';
+    // Ensure at least one uppercase, one digit, one special
+    pw += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random()*26)];
+    pw += '23456789'[Math.floor(Math.random()*8)];
+    pw += '!@#$%'[Math.floor(Math.random()*5)];
+    for (let i = 0; i < 9; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById('reg-password').value = pw.split('').sort(() => 0.5-Math.random()).join('');
+}
+
+function detectGPSForRegistration() {
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('reg-lat').value = pos.coords.latitude.toFixed(4);
+        document.getElementById('reg-lon').value = pos.coords.longitude.toFixed(4);
+        document.getElementById('gps-reg-result').textContent = `✅ ${pos.coords.latitude.toFixed(4)}°N, ${pos.coords.longitude.toFixed(4)}°E`;
+    }, err => {
+        document.getElementById('gps-reg-result').textContent = '⚠ GPS unavailable — enter coordinates manually';
+    });
+}
+lucide.createIcons();
+</script>
+{% endblock %}

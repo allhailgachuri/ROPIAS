@@ -1,0 +1,275 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Run Analysis{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">🔬 Run Analysis</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Command-center analysis for any location. Results include PDF export and field note options.</p>
+</div>
+
+<div class="row g-4">
+<div class="col-12 col-lg-8">
+    <div class="officer-card mb-4">
+        <div class="officer-card-header"><h2 class="officer-card-title">Analysis Parameters</h2></div>
+        <div class="officer-card-body">
+            <!-- Location tabs -->
+            <div class="mb-3">
+                <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body); text-transform:uppercase; letter-spacing:0.06em;">📍 Location</label>
+                <div style="display:flex; gap:4px; margin-top:8px; background:var(--bg-subtle); border-radius:8px; padding:4px;">
+                    <button class="anlz-tab active" id="tabCoords" onclick="switchTab('coords')">Coordinates</button>
+                    <button class="anlz-tab" id="tabFarmer" onclick="switchTab('farmer')">By Farmer</button>
+                </div>
+
+                <!-- Coords pane -->
+                <div id="paneCoords" class="mt-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" step="any" id="lat-in" placeholder="Latitude (e.g. 0.2800)"
+                                style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:13px; color:var(--text-primary);">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" step="any" id="lon-in" placeholder="Longitude (e.g. 34.7500)"
+                                style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:13px; color:var(--text-primary);">
+                        </div>
+                        <div class="col-12">
+                            <button onclick="useGPS()" class="quick-action-btn" style="width:auto; margin-top:4px;">
+                                <i data-lucide="crosshair" style="width:14px; height:14px;"></i> Use GPS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Farmer select pane -->
+                <div id="paneFarmer" class="mt-3" style="display:none;">
+                    <select id="farmerSelect" onchange="loadFarmerCoords(this.value)"
+                        style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary);">
+                        <option value="">Select a farmer...</option>
+                        {% for f in farmers %}
+                        {% if f.farm_latitude %}
+                        <option value="{{ f.id }}" data-lat="{{ f.farm_latitude }}" data-lon="{{ f.farm_longitude }}" data-crop="{{ f.preferred_crop }}">
+                            {{ f.full_name }} ({{ f.region }})
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    <div id="farmerCoordDisplay" style="font-family:var(--font-mono); font-size:12px; color:var(--teal); margin-top:8px;"></div>
+                </div>
+            </div>
+
+            <!-- Crop -->
+            <div class="mb-3">
+                <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body); text-transform:uppercase; letter-spacing:0.06em;">🌱 Crop</label>
+                <select id="crop-in"
+                    style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin-top:8px;">
+                    <option value="maize">Maize (Mahindi)</option>
+                    <option value="beans">Beans (Maharagwe)</option>
+                    <option value="tea">Tea</option>
+                    <option value="coffee">Coffee</option>
+                    <option value="sorghum">Sorghum</option>
+                    <option value="millet">Millet</option>
+                    <option value="irish_potato">Irish Potato</option>
+                    <option value="sweet_potato">Sweet Potato</option>
+                    <option value="kale">Kale</option>
+                    <option value="tomato">Tomato</option>
+                </select>
+            </div>
+
+            <button id="run-btn" onclick="runOfficerAnalysis()" class="btn w-100 d-flex align-items-center justify-content-center gap-2"
+                style="height:48px; background:var(--navy); color:white; border-radius:10px; font-family:var(--font-body); font-size:15px; font-weight:600;">
+                <i data-lucide="zap" style="width:18px;"></i>
+                <span id="run-btn-text">Run Analysis</span>
+                <span class="spinner-border spinner-border-sm d-none" id="run-spinner"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Container (rendered by JS) -->
+    <div id="officer-results" style="display:none;"></div>
+</div>
+
+<div class="col-12 col-lg-4">
+    <div class="officer-card">
+        <div class="officer-card-header"><h2 class="officer-card-title">Officer Actions</h2></div>
+        <div class="officer-card-body p-3 d-flex flex-column gap-2">
+            <button onclick="exportPDF()" class="quick-action-btn">
+                <i data-lucide="file-text" style="width:15px; height:15px;"></i> Export as PDF Report
+            </button>
+            <button onclick="exportCSV()" class="quick-action-btn">
+                <i data-lucide="download" style="width:15px; height:15px;"></i> Export as CSV
+            </button>
+            <button onclick="showFieldNoteModal()" class="quick-action-btn">
+                <i data-lucide="edit-3" style="width:15px; height:15px;"></i> Add Field Note
+            </button>
+            <button onclick="sendWhatsApp()" class="quick-action-btn">
+                <i data-lucide="send" style="width:15px; height:15px;"></i> Send to Farmer (WhatsApp)
+            </button>
+            <a href="{{ url_for('officer.alert_log') }}" class="quick-action-btn">
+                <i data-lucide="bell" style="width:15px; height:15px;"></i> Go to Alert Centre
+            </a>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Field Note Modal -->
+<div id="fieldNoteModal" style="display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card); border-radius:16px; padding:28px; max-width:500px; width:92%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+        <h3 style="font-family:var(--font-display); font-size:1.2rem; margin:0 0 16px; color:var(--text-primary);">Add Field Note</h3>
+        <textarea id="fieldNoteText" rows="4" placeholder="Describe field conditions, observations, or recommendations..."
+            style="width:100%; padding:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); resize:vertical;"></textarea>
+        <div class="d-flex gap-2 mt-3">
+            <button onclick="saveFieldNote()" class="btn" style="flex:1; background:var(--navy); color:white; height:42px; border-radius:8px; font-family:var(--font-body);">Save Note</button>
+            <button onclick="document.getElementById('fieldNoteModal').style.display='none'" class="btn" style="flex:1; background:var(--bg-input); color:var(--text-primary); height:42px; border-radius:8px; font-family:var(--font-body); border:1px solid var(--border);">Cancel</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+.anlz-tab { flex:1; padding:7px 12px; border-radius:6px; background:none; border:none; font-family:var(--font-body); font-size:13px; color:var(--text-muted); cursor:pointer; transition:all 0.15s; }
+.anlz-tab.active { background:var(--bg-card); color:var(--text-primary); font-weight:600; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+</style>
+<script>
+let lastResult = null;
+let lastLat = null, lastLon = null;
+
+function switchTab(tab) {
+    document.getElementById('tabCoords').classList.toggle('active', tab === 'coords');
+    document.getElementById('tabFarmer').classList.toggle('active', tab === 'farmer');
+    document.getElementById('paneCoords').style.display = tab === 'coords' ? '' : 'none';
+    document.getElementById('paneFarmer').style.display = tab === 'farmer' ? '' : 'none';
+}
+
+function loadFarmerCoords(farmerId) {
+    const sel = document.getElementById('farmerSelect');
+    const opt = sel.options[sel.selectedIndex];
+    const lat = opt.dataset.lat, lon = opt.dataset.lon, crop = opt.dataset.crop;
+    if (lat) {
+        lastLat = parseFloat(lat); lastLon = parseFloat(lon);
+        document.getElementById('farmerCoordDisplay').textContent = `📍 ${parseFloat(lat).toFixed(4)}°N, ${parseFloat(lon).toFixed(4)}°E`;
+        if (crop) document.getElementById('crop-in').value = crop;
+    }
+}
+
+function useGPS() {
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('lat-in').value = pos.coords.latitude.toFixed(4);
+        document.getElementById('lon-in').value = pos.coords.longitude.toFixed(4);
+    }, () => alert('GPS unavailable.'));
+}
+
+async function runOfficerAnalysis() {
+    const farmerTab = document.getElementById('tabFarmer').classList.contains('active');
+    const lat = farmerTab ? lastLat : parseFloat(document.getElementById('lat-in').value);
+    const lon = farmerTab ? lastLon : parseFloat(document.getElementById('lon-in').value);
+    const crop = document.getElementById('crop-in').value;
+    if (!lat || !lon) { alert('Please enter a location.'); return; }
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    document.getElementById('run-btn-text').textContent = 'Fetching NASA data...';
+    document.getElementById('run-spinner').classList.remove('d-none');
+    document.getElementById('officer-results').style.display = 'none';
+
+    try {
+        const resp = await fetch('/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({latitude: lat, longitude: lon, crop}) });
+        const data = await resp.json();
+        lastResult = data; lastLat = lat; lastLon = lon;
+        if (resp.ok) renderOfficerResults(data, lat, lon, crop);
+        else alert(data.error || 'Analysis failed.');
+    } catch(e) { alert('Network error.'); }
+
+    btn.disabled = false;
+    document.getElementById('run-btn-text').textContent = 'Run Analysis';
+    document.getElementById('run-spinner').classList.add('d-none');
+}
+
+function renderOfficerResults(data, lat, lon, crop) {
+    const onset = data.onset || {};
+    const irr = data.irrigation || {};
+    const colorBg = { true:'rgba(46,125,82,0.1)', false:'rgba(192,57,43,0.1)', uncertain:'rgba(183,121,31,0.1)' };
+    const colorBorder = { true:'var(--green-safe)', false:'var(--red-danger)', uncertain:'var(--amber-watch)' };
+    const c = onset.color || 'grey';
+
+    const html = `
+    <div class="officer-card mb-4" style="border-color:${colorBorder[c]||'var(--border)'};">
+        <div class="officer-card-header" style="background:${colorBg[c]||''};">
+            <h2 class="officer-card-title" style="font-size:1.1rem;">${onset.result || 'No Result'}</h2>
+            <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E · ${crop}</span>
+        </div>
+        <div class="officer-card-body">
+            <p style="font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin:0 0 16px;">${onset.summary || '—'}</p>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+                <div style="text-align:center;">
+                    <div style="font-family:var(--font-display); font-size:2rem; color:var(--navy);">${irr.moisture_percent ? Math.round(irr.moisture_percent) + '%' : '—'}</div>
+                    <div style="font-family:var(--font-body); font-size:11px; color:var(--text-muted); text-transform:uppercase;">Soil Moisture</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-family:var(--font-display); font-size:2rem; color:var(--navy);">${onset.cumulative_rain ? onset.cumulative_rain + 'mm' : '—'}</div>
+                    <div style="font-family:var(--font-body); font-size:11px; color:var(--text-muted); text-transform:uppercase;">Cumulative Rain</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-family:var(--font-display); font-size:2rem; color:var(--navy);">${onset.ml_metadata ? Math.round(onset.ml_metadata.confidence*100) + '%' : '—'}</div>
+                    <div style="font-family:var(--font-body); font-size:11px; color:var(--text-muted); text-transform:uppercase;">ML Confidence</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <canvas id="resultChart" height="140"></canvas>`;
+
+    const container = document.getElementById('officer-results');
+    container.innerHTML = html;
+    container.style.display = 'block';
+
+    // Chart
+    const chart = data.chart || {};
+    if (chart.labels) {
+        new Chart(document.getElementById('resultChart'), {
+            data: { labels: chart.labels, datasets: [
+                { type:'bar', label:'Rain (mm)', data: chart.rainfall, backgroundColor:'rgba(86,124,141,0.55)', borderRadius:3, yAxisID:'y1' },
+                { type:'line', label:'Soil %', data: chart.soil_moisture, borderColor:'#2E7D52', borderWidth:2, pointRadius:2, tension:0.4, fill:true, backgroundColor:'rgba(46,125,82,0.06)', yAxisID:'y2' }
+            ]},
+            options: { responsive:true, plugins:{ legend:{ labels:{ font:{ family:'JetBrains Mono' }, boxWidth:12 }}}, scales:{
+                y1:{position:'left', display:true, ticks:{font:{family:'JetBrains Mono',size:9}}},
+                y2:{position:'right', min:0, max:100, grid:{display:false}, ticks:{font:{family:'JetBrains Mono',size:9}}}
+            }}
+        });
+    }
+}
+
+function showFieldNoteModal() {
+    if (!lastResult) { alert('Run an analysis first.'); return; }
+    document.getElementById('fieldNoteModal').style.display = 'flex';
+}
+
+function saveFieldNote() {
+    const note = document.getElementById('fieldNoteText').value.trim();
+    if (!note) return;
+    fetch('/officer/api/field-note', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ note, lat: lastLat, lon: lastLon })
+    }).then(r => {
+        document.getElementById('fieldNoteModal').style.display = 'none';
+        document.getElementById('fieldNoteText').value = '';
+        alert('Field note saved.');
+    }).catch(() => alert('Failed to save note.'));
+}
+
+function exportCSV() {
+    if (!lastResult) { alert('Run an analysis first.'); return; }
+    const rows = [['Latitude','Longitude','Onset Result','Soil %','ML Confidence'],
+        [lastLat, lastLon, lastResult.onset?.result, lastResult.irrigation?.moisture_percent?.toFixed(1), lastResult.onset?.ml_metadata?.confidence]];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'ropias_analysis.csv';
+    a.click();
+}
+
+function exportPDF() { alert('PDF export feature — add reportlab to requirements.txt to enable.'); }
+function sendWhatsApp() { window.location.href = '{{ url_for("officer.alert_log") }}'; }
+
+lucide.createIcons();
+</script>
+{% endblock %}

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}ROPIAS Auth{% endblock %}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.png') }}">
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -79,14 +82,14 @@
         <div class="brand-panel">
             <!-- Mobile Header Only -->
             <a href="/" class="d-md-none text-decoration-none d-flex align-items-center gap-2">
-                <img src="{{ url_for('static', filename='img/logo-light.png') }}" style="height:24px; filter: brightness(0) invert(1);" alt="ROPIAS">
+                <img src="{{ url_for('static', filename='img/logo-light.png') }}" style="height:36px; filter: brightness(0) invert(1);" alt="ROPIAS">
                 <span style="font-family: var(--font-display); color: white; font-size: 1.2rem;">ROPIAS</span>
             </a>
             
             <!-- Desktop Layout -->
             <div class="brand-panel-content">
                 <a href="/" class="text-decoration-none">
-                    <img src="{{ url_for('static', filename='img/logo-light.png') }}" style="height: 48px; filter: invert(0.8) sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2);" class="mb-3" alt="ROPIAS">
+                    <img src="{{ url_for('static', filename='img/logo-light.png') }}" style="height: 56px; filter: invert(0.8) sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2);" class="mb-3" alt="ROPIAS">
                 </a>
                 <h1 style="font-family: var(--font-display); font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.1;">ROPIAS</h1>
                 <p style="font-family: var(--font-body); font-weight: 300; font-size: 0.85rem; color: #C8D9E6; letter-spacing: 0.05em; text-transform: uppercase;">Rainfall Onset Prediction<br>& Irrigation Advisory System</p>

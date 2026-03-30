@@ -1,0 +1,46 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Audit Log{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">📋 Audit Log</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Read-only chronological record of all administrative actions</p>
+</div>
+
+<div class="officer-card">
+    <div class="officer-card-header">
+        <h2 class="officer-card-title">System Audit Trail</h2>
+        <div style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">{{ entries|length }} entries shown</div>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="officer-table">
+            <thead>
+                <tr><th>Timestamp</th><th>Officer</th><th>Action</th><th>Details</th><th>IP Address</th></tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td style="font-family:var(--font-mono); font-size:11px; white-space:nowrap; color:var(--text-muted);">
+                        {{ entry.timestamp.strftime('%b %d, %Y %H:%M:%S') }}
+                    </td>
+                    <td style="font-size:13px; font-weight:600;">{{ entry.user.full_name if entry.user else 'System' }}</td>
+                    <td>
+                        <span style="font-family:var(--font-mono); font-size:11px; background:var(--bg-subtle); padding:2px 8px; border-radius:4px; color:var(--navy);">
+                            {{ entry.action }}
+                        </span>
+                    </td>
+                    <td style="font-size:13px; color:var(--text-muted); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        {{ entry.details or '—' }}
+                    </td>
+                    <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">
+                        {{ entry.ip_address or '—' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No audit entries recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>lucide.createIcons();</script>{% endblock %}

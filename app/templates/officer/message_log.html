@@ -1,0 +1,68 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Message Log{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">📨 Message Log</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Complete history of all alerts and WhatsApp communications</p>
+</div>
+
+<div class="officer-card">
+    <div class="officer-card-header">
+        <h2 class="officer-card-title">All Messages</h2>
+        <div class="d-flex gap-2">
+            <select id="msgFilter" style="height:34px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; font-family:var(--font-body); font-size:12px; color:var(--text-primary);" onchange="filterMessages()">
+                <option value="">All Status</option>
+                <option value="delivered">Delivered</option>
+                <option value="failed">Failed</option>
+                <option value="sent">Sent</option>
+            </select>
+        </div>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="officer-table">
+            <thead><tr><th>Recipient</th><th>Channel</th><th>Message Preview</th><th>Status</th><th>Sent At</th><th>Action</th></tr></thead>
+            <tbody id="msgBody">
+                {% for alert in alerts %}
+                <tr class="msg-row" data-status="{{ alert.delivery_status or 'sent' }}">
+                    <td>
+                        <div style="font-weight:600; font-size:13px;">{{ alert.user.full_name if alert.user else 'Broadcast' }}</div>
+                        <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">{{ alert.user.phone if alert.user else 'All farmers' }}</div>
+                    </td>
+                    <td style="font-size:13px; text-transform:capitalize;">{{ alert.channel }}</td>
+                    <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:var(--text-muted);">
+                        {{ alert.content_summary or '—' }}
+                    </td>
+                    <td>
+                        {% if alert.delivery_status == 'delivered' %}<span class="status-badge active">✓ Delivered</span>
+                        {% elif alert.delivery_status == 'failed' %}<span class="status-badge rejected">✗ Failed</span>
+                        {% else %}<span class="status-badge pending">⏳ Sent</span>{% endif %}
+                    </td>
+                    <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); white-space:nowrap;">
+                        {{ alert.sent_at.strftime('%b %d, %Y %H:%M') }}
+                    </td>
+                    <td>
+                        {% if alert.delivery_status == 'failed' and alert.user and alert.user.phone %}
+                        <a href="https://wa.me/{{ alert.user.phone|replace('+','') }}" target="_blank" style="font-size:12px; color:var(--teal); text-decoration:none;">↗ Retry</a>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">No messages logged yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterMessages() {
+    const f = document.getElementById('msgFilter').value;
+    document.querySelectorAll('.msg-row').forEach(row => {
+        row.style.display = !f || row.dataset.status === f ? '' : 'none';
+    });
+}
+lucide.createIcons();
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Export Centre{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">⬇️ Export Centre</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Download all ROPIAS data in CSV or PDF format</p>
+</div>
+
+<div class="row g-4">
+    {% set exports = [
+        {'title': 'All Farmers Registry', 'desc': 'Full list of all registered farmers including GPS, crop, contact, and status.', 'url': "officer.export_farmers_csv", 'icon': '👥', 'color': '#2F4156'},
+        {'title': 'Analysis History (All)', 'desc': 'All query logs across all farmers — onset results, soil moisture, GPS, and timestamps.', 'url': "officer.export_queries_csv", 'icon': '📊', 'color': '#2E7D52'},
+        {'title': 'Alert Log', 'desc': 'All WhatsApp alerts sent — farmer, channel, content, delivery status, and timestamp.', 'url': "officer.export_alerts_csv", 'icon': '📱', 'color': '#567C8D'},
+        {'title': 'Pending Approvals', 'desc': 'List of all farmer accounts currently awaiting approval.', 'url': "officer.pending_farmers", 'icon': '⏳', 'color': '#B7791F'},
+        {'title': 'Active Farmers Only', 'desc': 'CSV export of active, whatsapp-enabled farmers for broadcast operations.', 'url': "officer.export_farmers_csv", 'icon': '✅', 'color': '#2E7D52'},
+    ] %}
+    {% for e in exports %}
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="officer-card" style="border-top: 4px solid {{ e.color }};">
+            <div class="officer-card-body">
+                <div style="font-size:2.5rem; margin-bottom:12px;">{{ e.icon }}</div>
+                <h3 style="font-family:var(--font-display); font-size:1.1rem; color:var(--text-primary); margin:0 0 8px;">{{ e.title }}</h3>
+                <p style="font-family:var(--font-body); font-size:13px; color:var(--text-muted); margin:0 0 16px; line-height:1.5;">{{ e.desc }}</p>
+                <a href="{{ url_for(e.url) }}" class="quick-action-btn">
+                    <i data-lucide="download" style="width:15px; height:15px;"></i> Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- PDF Report (coming soon indicator) -->
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="officer-card" style="border-top: 4px solid var(--text-muted); opacity:0.8;">
+            <div class="officer-card-body">
+                <div style="font-size:2.5rem; margin-bottom:12px;">📄</div>
+                <h3 style="font-family:var(--font-display); font-size:1.1rem; color:var(--text-primary); margin:0 0 8px;">Full PDF Report</h3>
+                <p style="font-family:var(--font-body); font-size:13px; color:var(--text-muted); margin:0 0 16px; line-height:1.5;">
+                    Formatted regional report with all charts and data. Requires <code>reportlab</code> package.
+                </p>
+                <a href="{{ url_for('officer.export_pdf_report') }}" class="quick-action-btn">
+                    <i data-lucide="file-text" style="width:15px; height:15px;"></i> Download PDF Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>lucide.createIcons();</script>{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | System Settings{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">⚙️ System Settings</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Manage thresholds, API credentials, and officer accounts</p>
+</div>
+
+<div class="row g-4">
+    <!-- Analysis Thresholds -->
+    <div class="col-12 col-lg-6">
+        <div class="officer-card mb-4">
+            <div class="officer-card-header"><h2 class="officer-card-title">🌧️ Analysis Thresholds</h2></div>
+            <div class="officer-card-body">
+                <form method="POST" action="{{ url_for('officer.save_thresholds') }}">
+                    <div class="mb-3">
+                        <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Rainfall Threshold (mm)</label>
+                        <input type="number" step="0.1" name="rainfall_threshold" value="{{ config.rainfall_threshold or 20 }}"
+                            style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--font-body);">Minimum cumulative rainfall for a True Onset (default: 20mm)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Dry Spell Filter (days)</label>
+                        <input type="number" name="dry_spell_days" value="{{ config.dry_spell_days or 7 }}"
+                            style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--font-body);">Max dry spell tolerated after onset (default: 7 days)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Soil Moisture Min (%)</label>
+                        <input type="number" step="0.1" name="soil_min" value="{{ config.soil_min or 30 }}"
+                            style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--font-body);">Minimum soil moisture for safe planting</div>
+                    </div>
+                    <div class="mb-4">
+                        <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Lookback Window (days)</label>
+                        <input type="number" name="lookback_days" value="{{ config.lookback_days or 60 }}"
+                            style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--font-body);">Historical window for NASA data fetch (default: 60 days)</div>
+                    </div>
+                    <button type="submit" class="btn w-100" style="height:46px; background:var(--navy); color:white; border-radius:8px; font-family:var(--font-body); font-weight:600;">
+                        Save Threshold Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Twilio / NASA Config -->
+    <div class="col-12 col-lg-6">
+        <div class="officer-card mb-4">
+            <div class="officer-card-header"><h2 class="officer-card-title">📱 Twilio WhatsApp Config</h2></div>
+            <div class="officer-card-body">
+                <div style="padding:14px; background:var(--bg-subtle); border-radius:10px; margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; gap:8px; font-family:var(--font-body); font-size:13px; color:var(--text-primary);">
+                        <div style="width:8px; height:8px; border-radius:50%; background:{% if twilio_status %}var(--green-safe){% else %}var(--red-danger){% endif %};"></div>
+                        Twilio: {% if twilio_status %}<strong>Connected</strong> · {{ twilio_account_id or 'Configured' }}{% else %}<strong>Not configured</strong>{% endif %}
+                    </div>
+                </div>
+                <div style="font-family:var(--font-body); font-size:13px; color:var(--text-muted);">
+                    Twilio credentials are configured via environment variables in <code>.env</code>:<br><br>
+                    <code style="background:var(--bg-subtle); padding:2px 6px; border-radius:4px;">TWILIO_ACCOUNT_SID</code><br>
+                    <code style="background:var(--bg-subtle); padding:2px 6px; border-radius:4px;">TWILIO_AUTH_TOKEN</code><br>
+                    <code style="background:var(--bg-subtle); padding:2px 6px; border-radius:4px;">TWILIO_WHATSAPP_FROM</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Officer Management -->
+        <div class="officer-card">
+            <div class="officer-card-header"><h2 class="officer-card-title">👤 Officer Accounts</h2></div>
+            <div style="overflow-x:auto;">
+                <table class="officer-table">
+                    <thead>
+                        <tr><th>Name</th><th>Email</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for officer in officers %}
+                        <tr>
+                            <td style="font-weight:600; font-size:13px;">{{ officer.full_name }}</td>
+                            <td style="font-size:12px; color:var(--text-muted);">{{ officer.email }}</td>
+                            <td><span class="status-badge {% if officer.is_active %}active{% else %}inactive{% endif %}">
+                                {% if officer.is_active %}✅ Active{% else %}⚫ Disabled{% endif %}
+                            </span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No other officers.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>lucide.createIcons();</script>{% endblock %}

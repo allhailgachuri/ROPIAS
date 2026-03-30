@@ -1,0 +1,59 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | System Health{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">🏥 System Health</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Real-time health checks across all system components</p>
+</div>
+
+<div class="row g-4 mb-4">
+    {% for service in services %}
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="officer-card" style="border-top: 4px solid {% if service.status == 'ok' %}var(--green-safe){% elif service.status == 'warn' %}var(--amber-watch){% else %}var(--red-danger){% endif %};">
+            <div class="officer-card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span style="font-size:1.5rem;">{{ service.icon }}</span>
+                    <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; background:{% if service.status == 'ok' %}rgba(46,125,82,0.12){% elif service.status == 'warn' %}rgba(183,121,31,0.12){% else %}rgba(192,57,43,0.12){% endif %}; color:{% if service.status == 'ok' %}var(--green-safe){% elif service.status == 'warn' %}var(--amber-watch){% else %}var(--red-danger){% endif %};">
+                        {{ service.status_label }}
+                    </span>
+                </div>
+                <div style="font-family:var(--font-body); font-weight:700; font-size:15px; color:var(--text-primary); margin-bottom:4px;">{{ service.name }}</div>
+                <div style="font-family:var(--font-body); font-size:12px; color:var(--text-muted);">{{ service.detail }}</div>
+                {% if service.latency %}
+                <div style="font-family:var(--font-mono); font-size:11px; color:var(--teal); margin-top:8px;">Latency: {{ service.latency }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Database Stats -->
+<div class="officer-card mb-4">
+    <div class="officer-card-header"><h2 class="officer-card-title">🗄️ Database Statistics</h2></div>
+    <div class="officer-card-body">
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:20px;">
+            {% for stat in db_stats %}
+            <div style="text-align:center;">
+                <div style="font-family:var(--font-display); font-size:2rem; color:var(--navy);">{{ stat.count }}</div>
+                <div style="font-family:var(--font-body); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">{{ stat.label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- System Info -->
+<div class="officer-card">
+    <div class="officer-card-header"><h2 class="officer-card-title">🖥️ Environment Info</h2></div>
+    <div class="officer-card-body">
+        <div style="display:grid; grid-template-columns: 180px 1fr; gap:8px; font-family:var(--font-body); font-size:13px;">
+            {% for k, v in env_info.items() %}
+            <div style="color:var(--text-muted); font-weight:600;">{{ k }}</div>
+            <div style="font-family:var(--font-mono); font-size:12px;">{{ v }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>lucide.createIcons();</script>{% endblock %}

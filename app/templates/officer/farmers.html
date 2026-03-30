@@ -1,128 +1,165 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROPIAS Admin | Farmers</title>
-    <!-- Fonts & CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ropias.css') }}">
-    <style>
-        .admin-wrapper { max-width: 1400px; margin: 0 auto; padding-top: 2rem; }
-        .dashboard-nav a { color: var(--navy); text-decoration: none; font-weight: 500; margin-right: 1.5rem; opacity: 0.7; transition: 0.2s; }
-        .dashboard-nav a:hover, .dashboard-nav a.active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--teal); padding-bottom: 0.4rem; }
-    </style>
-</head>
-<body style="background-color: #F5EFEB;">
-
-<div class="admin-wrapper px-4 px-md-5 mb-5">
-    
-    <!-- Admin Navigation -->
-    <header class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="var(--teal)" class="bi bi-cloud-rain-fill" viewBox="0 0 16 16"><path d="M4.158 12.025a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 0 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-.5 1.5a.5.5 0 0 1-.948-.316l.5-1.5a.5.5 0 0 1 .632-.317zm3 0a.5.5 0 0 1 .316.633l-1 3a.5.5 0 1 1-.948-.316l1-3a.5.5 0 0 1 .632-.317zm.247-6.998a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 11H13a3 3 0 0 0 .405-5.973z"/></svg>
-            <h2 class="mb-0" style="font-family:'Playfair Display', serif; color: var(--navy);">Admin Console</h2>
-        </div>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">Logout</a>
-    </header>
-
-    <div class="dashboard-nav mb-5">
-        <a href="{{ url_for('officer.dashboard') }}">Overview</a>
-        <a href="{{ url_for('officer.farmer_list') }}" class="active">Farmers</a>
-        <a href="{{ url_for('officer.alert_log') }}">Alerts & Messaging</a>
-        <a href="{{ url_for('officer.analytics') }}">ML Analytics</a>
-        <a href="{{ url_for('officer.system_status') }}">System Settings</a>
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | All Farmers{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">👥 All Farmers</h1>
+        <p class="officer-greeting-sub mb-0">
+            <strong>{{ farmers|selectattr('is_active')|list|length }}</strong> active ·
+            <strong>{{ pending_count }}</strong> pending ·
+            <strong>{{ farmers|rejectattr('is_active')|list|length }}</strong> inactive
+        </p>
     </div>
-
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}{% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}{% endif %}
-    {% endwith %}
-
-    <!-- Active Farmers Table -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
-        <div class="card-header bg-white border-0 py-4 px-4 d-flex justify-content-between align-items-center">
-            <h4 class="mb-0" style="font-family: 'Playfair Display', serif; color: var(--navy);">Farmer Directory</h4>
-            <a href="{{ url_for('officer.new_farmer') }}" class="btn btn-navy rounded-pill px-4"><i class="bi bi-person-plus-fill me-2"></i>Onboard Farmer</a>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light text-muted" style="font-family: 'Source Sans 3', sans-serif;">
-                    <tr>
-                        <th class="px-4 py-3 fw-normal">Farmer</th>
-                        <th class="py-3 fw-normal">Location</th>
-                        <th class="py-3 fw-normal">Crop</th>
-                        <th class="py-3 fw-normal">Status</th>
-                        <th class="py-3 fw-normal">Registered</th>
-                        <th class="px-4 py-3 fw-normal text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for farmer in farmers %}
-                    <tr>
-                        <td class="px-4 py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px;height:40px;font-weight:600;font-size:0.9rem;">
-                                    {{ farmer.avatar_initials }}
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 text-dark">{{ farmer.full_name }}</h6>
-                                    <small class="text-muted">{{ farmer.email }} | {{ farmer.phone or 'No phone' }}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="py-3 text-muted">
-                            {% if farmer.farm_latitude and farmer.farm_longitude %}
-                                {{ farmer.farm_latitude|round(3) }}, {{ farmer.farm_longitude|round(3) }}
-                            {% else %}
-                                <span class="badge bg-light text-muted border">Pending GPS</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3">
-                            <span class="badge text-dark" style="background:#F5EFEB;">{{ farmer.preferred_crop|title }}</span>
-                        </td>
-                        <td class="py-3">
-                            {% if farmer.is_active %}
-                                <span class="text-success small fw-bold"><i class="bi bi-person-check-fill me-1"></i>Active</span>
-                            {% else %}
-                                <span class="text-danger small fw-bold"><i class="bi bi-person-x-fill me-1"></i>Suspended</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3 text-muted small">
-                            {{ farmer.created_at.strftime('%Y-%m-%d') }}
-                        </td>
-                        <td class="px-4 py-3 text-end d-flex justify-content-end gap-2">
-                            <!-- Reset Password Hook (Future) -->
-                            <button class="btn btn-sm btn-light border rounded-pill px-3 text-muted" title="Reset Password" disabled><i class="bi bi-key-fill"></i></button>
-                            
-                            <form action="{{ url_for('officer.toggle_farmer', user_id=farmer.id) }}" method="POST" class="d-inline">
-                                {% if farmer.is_active %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Suspend</button>
-                                {% else %}
-                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3">Activate</button>
-                                {% endif %}
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    {% if not farmers %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">No farmers registered in the system yet.</td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+    <a href="{{ url_for('officer.new_farmer') }}" class="btn" style="background:var(--navy); color:white; border-radius:10px; font-family:var(--font-body); font-weight:600; padding:10px 20px;">
+        + Register Farmer
+    </a>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<!-- Search + Filters -->
+<div class="officer-card mb-4">
+    <div class="officer-card-body p-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-5">
+                <div style="position:relative;">
+                    <i data-lucide="search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:15px; color:var(--text-muted);"></i>
+                    <input type="text" id="farmerSearch" placeholder="Search by name, email, phone..."
+                        style="width:100%; height:40px; padding:0 14px 0 36px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:13px; color:var(--text-primary);"
+                        oninput="filterFarmers()">
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <select id="filterStatus" style="width:100%; height:40px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:13px; color:var(--text-primary);" onchange="filterFarmers()">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <select id="filterCrop" style="width:100%; height:40px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:13px; color:var(--text-primary);" onchange="filterFarmers()">
+                    <option value="">All Crops</option>
+                    <option value="maize">Maize</option>
+                    <option value="beans">Beans</option>
+                    <option value="tea">Tea</option>
+                    <option value="coffee">Coffee</option>
+                    <option value="sorghum">Sorghum</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 text-end">
+                <span id="farmerCount" style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">{{ farmers|length }} farmers</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Farmers Table -->
+<div class="officer-card">
+    <div style="overflow-x:auto;">
+        <table class="officer-table" id="farmersTable">
+            <thead>
+                <tr>
+                    <th>Farmer</th>
+                    <th class="d-none d-md-table-cell">Phone</th>
+                    <th>Crop</th>
+                    <th class="d-none d-lg-table-cell">Region</th>
+                    <th>Status</th>
+                    <th class="d-none d-md-table-cell">Last Active</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="farmersBody">
+                {% for farmer in farmers %}
+                <tr class="farmer-row"
+                    data-name="{{ farmer.full_name|lower }}"
+                    data-phone="{{ farmer.phone or '' }}"
+                    data-email="{{ farmer.email|lower }}"
+                    data-crop="{{ farmer.preferred_crop or '' }}"
+                    data-status="{{ 'active' if farmer.is_active else ('pending' if farmer.status == 'pending' else 'inactive') }}">
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="officer-avatar" style="width:34px; height:34px; font-size:12px; background:var(--{% if farmer.is_active %}teal{% else %}text-muted{% endif %});">
+                                {{ farmer.avatar_initials or (farmer.full_name[:2].upper()) }}
+                            </div>
+                            <div>
+                                <div style="font-weight:600; font-size:14px;">{{ farmer.full_name }}</div>
+                                <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">{{ farmer.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="d-none d-md-table-cell" style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">
+                        {{ farmer.phone or '—' }}
+                    </td>
+                    <td style="font-size:13px;">
+                        {{ farmer.preferred_crop|title if farmer.preferred_crop else '—' }}
+                    </td>
+                    <td class="d-none d-lg-table-cell" style="font-size:13px; color:var(--text-muted);">
+                        {{ farmer.region or '—' }}
+                    </td>
+                    <td>
+                        {% if farmer.status == 'pending' %}
+                            <span class="status-badge pending">⏳ Pending</span>
+                        {% elif farmer.is_active %}
+                            <span class="status-badge active">✅ Active</span>
+                        {% else %}
+                            <span class="status-badge inactive">⚫ Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="d-none d-md-table-cell" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">
+                        {{ farmer.last_login.strftime('%b %d') if farmer.last_login else 'Never' }}
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="dropdown">
+                            <button class="btn btn-sm dropdown-toggle" style="background:var(--bg-input); border:1px solid var(--border); border-radius:6px; font-size:12px; padding:4px 10px;" data-bs-toggle="dropdown">
+                                Actions
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" style="font-family:var(--font-body); font-size:13px;">
+                                <li><a class="dropdown-item" href="{{ url_for('officer.farmer_detail', user_id=farmer.id) }}">👤 View Profile</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('officer.run_analysis') }}?farmer_id={{ farmer.id }}">🔬 Run Analysis</a></li>
+                                {% if farmer.phone %}
+                                <li><a class="dropdown-item" href="https://wa.me/{{ farmer.phone|replace('+','') }}" target="_blank">📱 WhatsApp</a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{{ url_for('officer.toggle_farmer', user_id=farmer.id) }}" method="POST" onsubmit="return confirm('{{ 'Deactivate' if farmer.is_active else 'Activate' }} {{ farmer.full_name }}?')">
+                                        <button type="submit" class="dropdown-item {% if farmer.is_active %}text-danger{% endif %}">
+                                            {{ '🔴 Deactivate' if farmer.is_active else '✅ Activate' }}
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">
+                        No farmers registered yet.
+                        <a href="{{ url_for('officer.new_farmer') }}" style="color:var(--teal);">Register the first farmer →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterFarmers() {
+    const search = document.getElementById('farmerSearch').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    const crop = document.getElementById('filterCrop').value;
+    let visible = 0;
+    document.querySelectorAll('.farmer-row').forEach(row => {
+        const nameMatch = row.dataset.name.includes(search) || row.dataset.phone.includes(search) || row.dataset.email.includes(search);
+        const statusMatch = !status || row.dataset.status === status;
+        const cropMatch = !crop || row.dataset.crop.includes(crop);
+        if (nameMatch && statusMatch && cropMatch) { row.style.display = ''; visible++; }
+        else row.style.display = 'none';
+    });
+    document.getElementById('farmerCount').textContent = visible + ' farmers';
+}
+lucide.createIcons();
+</script>
+{% endblock %}

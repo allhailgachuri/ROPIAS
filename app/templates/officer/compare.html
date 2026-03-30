@@ -1,0 +1,106 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Compare Farms{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">⚖️ Multi-Farm Compare</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Side-by-side comparison of up to 3 farmers' analysis results</p>
+</div>
+
+<div class="officer-card mb-4">
+    <div class="officer-card-header"><h2 class="officer-card-title">Select Farmers to Compare</h2></div>
+    <div class="officer-card-body">
+        <div class="row g-3">
+            {% for i in range(1, 4) %}
+            <div class="col-12 col-md-4">
+                <label style="font-size:12px; font-weight:600; color:var(--text-muted); font-family:var(--font-body);">Farmer {{ i }}</label>
+                <select id="farmer-{{ i }}" onchange="loadComparison()"
+                    style="width:100%; height:44px; padding:0 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-family:var(--font-body); font-size:14px; color:var(--text-primary); margin-top:6px;">
+                    <option value="">Choose farmer...</option>
+                    {% for f in farmers %}
+                    {% if f.farm_latitude %}
+                    <option value="{{ f.id }}" data-lat="{{ f.farm_latitude }}" data-lon="{{ f.farm_longitude }}" data-crop="{{ f.preferred_crop }}" data-name="{{ f.full_name }}">
+                        {{ f.full_name }} ({{ f.preferred_crop|title }})
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+            <div class="col-12">
+                <button onclick="runComparison()" class="btn" style="height:46px; padding:0 28px; background:var(--navy); color:white; border-radius:10px; font-family:var(--font-body); font-weight:600;">
+                    Run Comparison
+                    <span class="spinner-border spinner-border-sm d-none ms-2" id="cmp-spinner"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="comparison-results" style="display:none;">
+    <div class="officer-card mb-4">
+        <div class="officer-card-header"><h2 class="officer-card-title">Comparison Results</h2></div>
+        <div style="overflow-x:auto;">
+            <table class="officer-table" id="cmp-table">
+                <thead id="cmp-head"></thead>
+                <tbody id="cmp-body"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="officer-card">
+        <div class="officer-card-header"><h2 class="officer-card-title">Rainfall Overlay</h2></div>
+        <div class="officer-card-body"><canvas id="cmpChart" height="180"></canvas></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let cmpChart = null;
+
+async function runComparison() {
+    const farmers = [];
+    for (let i = 1; i <= 3; i++) {
+        const sel = document.getElementById(`farmer-${i}`);
+        const opt = sel.options[sel.selectedIndex];
+        if (opt.value && opt.dataset.lat) {
+            farmers.push({ id: opt.value, lat: parseFloat(opt.dataset.lat), lon: parseFloat(opt.dataset.lon), crop: opt.dataset.crop, name: opt.dataset.name });
+        }
+    }
+    if (farmers.length < 2) { alert('Select at least 2 farmers to compare.'); return; }
+    document.getElementById('cmp-spinner').classList.remove('d-none');
+
+    const results = await Promise.all(farmers.map(f =>
+        fetch('/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({latitude:f.lat, longitude:f.lon, crop:f.crop}) })
+        .then(r => r.json()).then(d => ({ ...d, farmer: f }))
+    ));
+
+    document.getElementById('cmp-spinner').classList.add('d-none');
+    renderComparisonTable(results);
+    renderComparisonChart(results);
+    document.getElementById('comparison-results').style.display = '';
+}
+
+function renderComparisonTable(results) {
+    const rows = [
+        ['', ...results.map(r => `<strong>${r.farmer.name}</strong>`)],
+        ['Crop', ...results.map(r => r.farmer.crop.replace('_',' '))],
+        ['Onset Result', ...results.map(r => r.onset?.result || '—')],
+        ['ML Confidence', ...results.map(r => r.onset?.ml_metadata ? Math.round(r.onset.ml_metadata.confidence*100)+'%' : '—')],
+        ['Cumulative Rain', ...results.map(r => r.onset?.cumulative_rain ? r.onset.cumulative_rain+'mm' : '—')],
+        ['Soil Moisture', ...results.map(r => r.irrigation?.moisture_percent ? Math.round(r.irrigation.moisture_percent)+'%' : '—')],
+        ['Irrigation Status', ...results.map(r => r.irrigation?.status || '—')]
+    ];
+    document.getElementById('cmp-table').innerHTML =
+        rows.map((row, i) => `<tr>${row.map((cell,j) => i===0&&j===0 ? '<th></th>' : `<${i===0?'th':'td'}>${cell}</${i===0?'th':'td'}>`).join('')}</tr>`).join('');
+}
+
+function renderComparisonChart(results) {
+    const ctx = document.getElementById('cmpChart');
+    if (cmpChart) cmpChart.destroy();
+    const colors = ['rgba(86,124,141,0.7)', 'rgba(46,125,82,0.7)', 'rgba(192,57,43,0.7)'];
+    const labels = results[0]?.chart?.labels || [];
+    const datasets = results.map((r, i) => ({ type:'line', label: r.farmer.name, data: r.chart?.rainfall, borderColor: colors[i].replace('0.7','1'), backgroundColor: colors[i], borderWidth:2, pointRadius:2, tension:0.4, fill:false }));
+    cmpChart = new Chart(ctx, { data:{ labels, datasets }, options:{ responsive:true, scales:{ y:{ ticks:{ font:{family:'JetBrains Mono',size:9}}}}}});
+}
+</script>
+{% endblock %}

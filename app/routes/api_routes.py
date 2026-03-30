@@ -6,11 +6,14 @@ Includes the Twilio WhatsApp incoming webhook.
 """
 
 from flask import Blueprint, request, jsonify
-from flask_login import current_user
+from flask_login import current_user, login_required
 import sys, os
 
 # DB and Models
 from database.models import db, QueryLog, User, FarmFeedback, APICache
+
+# Auth
+from auth.auth import admin_required
 
 # Engines and Utilities
 from src.data_fetcher import fetch_climate_data, validate_kenya_coordinates
@@ -166,9 +169,6 @@ def whatsapp_webhook():
     return str(resp), 200, {"Content-Type": "text/xml"}
 
 
-from auth.auth import admin_required
-from flask_login import login_required
-
 @api_bp.route("/admin/activity-feed", methods=["GET"])
 @login_required
 @admin_required
@@ -238,3 +238,40 @@ def activity_feed():
 @api_bp.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "ROPIAS ML Edition - Phase 2"}), 200
+
+
+@api_bp.route("/officer/farm-pins", methods=["GET"])
+@login_required
+@admin_required
+def farm_pins():
+    """
+    Returns GeoJSON FeatureCollection of all farmers with GPS coordinates.
+    Includes the most recent onset result for each farmer.
+    Used by Leaflet.js maps in the officer dashboard.
+    """
+    farmers = User.query.filter_by(role="farmer").filter(User.farm_latitude != None).all()
+    features = []
+    for f in farmers:
+        # Latest query for this farmer
+        latest = (QueryLog.query
+                  .filter_by(user_id=f.id)
+                  .order_by(QueryLog.created_at.desc())
+                  .first())
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [f.farm_longitude, f.farm_latitude]
+            },
+            "properties": {
+                "id": f.id,
+                "name": f.full_name,
+                "phone": f.phone or "",
+                "crop": f.preferred_crop or "—",
+                "onset_result": latest.onset_result if latest else None,
+                "onset_color": latest.onset_color if latest else "grey",
+                "moisture": round(latest.moisture_pct, 1) if latest and latest.moisture_pct else None,
+                "analyzed_at": latest.created_at.isoformat() if latest else None,
+            }
+        })
+    return jsonify({"type": "FeatureCollection", "features": features})

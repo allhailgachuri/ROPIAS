@@ -172,3 +172,62 @@ class Location(db.Model):
     region      = db.Column(db.String(100), nullable=False)
     latitude    = db.Column(db.Float, nullable=False)
     longitude   = db.Column(db.Float, nullable=False)
+
+
+class AuditLog(db.Model):
+    """
+    Records every significant admin action in the system.
+    Officers cannot delete audit log entries.
+    Examples: FARMER_APPROVED, FARMER_REJECTED, THRESHOLD_CHANGED,
+              BROADCAST_SENT, FARMER_REGISTERED, ANALYSIS_RUN,
+              OFFICER_ADDED, PASSWORD_RESET, FARMER_DEACTIVATED
+    """
+    __tablename__ = "audit_log"
+
+    id          = db.Column(db.Integer, primary_key=True)
+    timestamp   = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id     = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    action      = db.Column(db.String(60), nullable=False)
+    details     = db.Column(db.Text, nullable=True)   # JSON string or plain text
+    ip_address  = db.Column(db.String(45), nullable=True)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref="audit_entries")
+
+    def __repr__(self):
+        return f"<AuditLog {self.action} @ {self.timestamp}>"
+
+
+class ThresholdHistory(db.Model):
+    """
+    Records every change to analysis thresholds.
+    Allows tracing who changed what and when.
+    """
+    __tablename__ = "threshold_history"
+
+    id           = db.Column(db.Integer, primary_key=True)
+    changed_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    changed_by   = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    parameter    = db.Column(db.String(60), nullable=False)  # e.g. "rainfall_threshold_mm"
+    old_value    = db.Column(db.String(30), nullable=True)
+    new_value    = db.Column(db.String(30), nullable=False)
+
+    officer = db.relationship("User", foreign_keys=[changed_by])
+
+
+class FieldNote(db.Model):
+    """
+    Officer field notes attached to specific analysis results.
+    Links an officer annotation to a specific farmer's query result.
+    """
+    __tablename__ = "field_notes"
+
+    id           = db.Column(db.Integer, primary_key=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    officer_id   = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    farmer_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    query_log_id = db.Column(db.Integer, db.ForeignKey("query_logs.id"), nullable=True)
+    note         = db.Column(db.Text, nullable=False)
+
+    officer = db.relationship("User", foreign_keys=[officer_id], backref="field_notes_written")
+    farmer  = db.relationship("User", foreign_keys=[farmer_id])
+    query   = db.relationship("QueryLog", foreign_keys=[query_log_id])

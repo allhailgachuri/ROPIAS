@@ -1,0 +1,157 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | {{ farmer.full_name }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <a href="{{ url_for('officer.farmer_list') }}" style="color:var(--teal); text-decoration:none; font-family:var(--font-body); font-size:14px;">← Back to Farmers</a>
+    <span style="color:var(--border);">|</span>
+    <h1 style="font-family:var(--font-display); font-size:1.5rem; margin:0; color:var(--text-primary);">{{ farmer.full_name }}</h1>
+    <span class="status-badge {% if farmer.is_active %}active{% elif farmer.status == 'pending' %}pending{% else %}inactive{% endif %}">
+        {% if farmer.status == 'pending' %}⏳ Pending{% elif farmer.is_active %}✅ Active{% else %}⚫ Inactive{% endif %}
+    </span>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Profile Info -->
+    <div class="col-12 col-md-5">
+        <div class="officer-card mb-4">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">Contact & Farm</h2>
+                {% if not farmer.is_seeded %}
+                <div class="d-flex gap-2">
+                    <form action="{{ url_for('officer.toggle_farmer', user_id=farmer.id) }}" method="POST">
+                        <button type="submit" class="btn btn-sm" style="font-size:12px; background:{% if farmer.is_active %}rgba(192,57,43,0.1){% else %}rgba(46,125,82,0.1){% endif %}; color:{% if farmer.is_active %}var(--red-danger){% else %}var(--green-safe){% endif %}; border-radius:6px; border-color:transparent;" onclick="return confirm('{{ 'Deactivate' if farmer.is_active else 'Activate' }} this farmer?')">
+                            {{ '🔴 Deactivate' if farmer.is_active else '✅ Activate' }}
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            <div class="officer-card-body">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Email</div>
+                        <div style="font-size:13px; word-break:break-all;">{{ farmer.email }}</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Phone</div>
+                        <div style="font-size:13px; font-family:var(--font-mono);">{{ farmer.phone or '—' }}</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Region</div>
+                        <div style="font-size:13px;">{{ farmer.region or '—' }}</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Primary Crop</div>
+                        <div style="font-size:13px;">{{ farmer.preferred_crop|title if farmer.preferred_crop else '—' }}</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Farm GPS</div>
+                        <div style="font-size:12px; font-family:var(--font-mono);">
+                            {% if farmer.farm_latitude %}
+                                {{ farmer.farm_latitude|round(4) }}°N<br>{{ farmer.farm_longitude|round(4) }}°E
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Joined</div>
+                        <div style="font-size:13px;">{{ farmer.created_at.strftime('%b %d, %Y') }}</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">Last Login</div>
+                        <div style="font-size:13px;">{{ farmer.last_login.strftime('%b %d, %Y') if farmer.last_login else 'Never' }}</div>
+                    </div>
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px;">WhatsApp Alerts</div>
+                        <div style="font-size:13px;">{{ '✅ Enabled' if farmer.whatsapp_alerts else '⚫ Disabled' }}</div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('officer.run_analysis') }}?farmer_id={{ farmer.id }}" class="quick-action-btn" style="flex:1; min-width:140px;">
+                        <i data-lucide="flask-conical" style="width:15px; height:15px;"></i> Run Analysis
+                    </a>
+                    {% if farmer.phone %}
+                    <a href="https://wa.me/{{ farmer.phone|replace('+','') }}" target="_blank" class="quick-action-btn" style="flex:1; min-width:140px;">
+                        <i data-lucide="message-circle" style="width:15px; height:15px;"></i> WhatsApp
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: History + Alerts -->
+    <div class="col-12 col-md-7">
+        <!-- Analysis History -->
+        <div class="officer-card mb-4">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">📊 Analysis History (last 5)</h2>
+                <span style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">{{ total_queries }} total</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="officer-table">
+                    <thead>
+                        <tr><th>Date</th><th>Crop</th><th>Onset</th><th>Soil %</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for q in recent_queries %}
+                        <tr>
+                            <td style="font-family:var(--font-mono); font-size:11px;">{{ q.created_at.strftime('%b %d, %H:%M') }}</td>
+                            <td style="font-size:13px;">{{ q.crop_key|title if q.crop_key else '—' }}</td>
+                            <td>
+                                {% if q.onset_result == 'True Onset' %}
+                                    <span class="status-badge active">✅ True</span>
+                                {% elif q.onset_result == 'False Onset' %}
+                                    <span class="status-badge rejected">🚨 False</span>
+                                {% else %}
+                                    <span class="status-badge pending">⏳ {{ q.onset_result or 'None' }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-family:var(--font-mono); font-size:12px;">{{ q.moisture_pct|round(1) if q.moisture_pct else '—' }}%</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">No analyses yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alert History -->
+        <div class="officer-card">
+            <div class="officer-card-header">
+                <h2 class="officer-card-title">📱 Alerts Sent (last 5)</h2>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="officer-table">
+                    <thead>
+                        <tr><th>Date</th><th>Channel</th><th>Type</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for a in recent_alerts %}
+                        <tr>
+                            <td style="font-family:var(--font-mono); font-size:11px;">{{ a.sent_at.strftime('%b %d, %H:%M') }}</td>
+                            <td style="font-size:13px; text-transform:capitalize;">{{ a.channel }}</td>
+                            <td style="font-size:13px;">{{ a.message_type|replace('_', ' ')|title if a.message_type else '—' }}</td>
+                            <td>
+                                {% if a.delivery_status == 'delivered' %}
+                                    <span class="status-badge active">✓ Delivered</span>
+                                {% elif a.delivery_status == 'failed' %}
+                                    <span class="status-badge rejected">✗ Failed</span>
+                                {% else %}
+                                    <span class="status-badge pending">⏳ Sent</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">No alerts sent yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>lucide.createIcons();</script>{% endblock %}

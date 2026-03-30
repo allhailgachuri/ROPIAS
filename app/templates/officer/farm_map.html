@@ -1,0 +1,106 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Farm Map{% endblock %}
+{% block extra_head %}
+<style>
+#full-farm-map { height: calc(100vh - 200px); border-radius:12px; overflow:hidden; }
+.map-controls { position:absolute; top:80px; right:16px; z-index:800; display:flex; flex-direction:column; gap:8px; }
+.map-ctrl-btn {
+    padding: 8px 14px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: var(--font-body); font-size: 12px; font-weight:600;
+    color: var(--text-primary); cursor: pointer;
+    transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    white-space: nowrap;
+}
+.map-ctrl-btn:hover, .map-ctrl-btn.active { background: var(--navy); color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-3">
+    <div>
+        <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">🗺 Farm Map</h1>
+        <p class="officer-greeting-sub mb-0 mt-1">Showing <strong id="pin-count">—</strong> farms across Kenya's agricultural zones</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="map-ctrl-btn active" onclick="filterPins('all')">Show All</button>
+        <button class="map-ctrl-btn" onclick="filterPins('green')">✅ True Onsets</button>
+        <button class="map-ctrl-btn" onclick="filterPins('red')">🚨 False Onsets</button>
+        <button class="map-ctrl-btn" onclick="toggleClusters()">Cluster Mode</button>
+    </div>
+</div>
+
+<div style="position:relative;">
+    <div id="full-farm-map"></div>
+
+    <!-- Legend -->
+    <div style="position:absolute; bottom:20px; left:20px; z-index:800; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px 16px; box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+        <div style="font-family:var(--font-body); font-size:12px; font-weight:700; color:var(--text-primary); margin-bottom:8px;">LEGEND</div>
+        <div style="display:flex; flex-direction:column; gap:6px; font-family:var(--font-body); font-size:12px;">
+            <div style="display:flex; align-items:center; gap:8px;"><div style="width:12px; height:12px; border-radius:50%; background:#2E7D52;"></div> True Onset</div>
+            <div style="display:flex; align-items:center; gap:8px;"><div style="width:12px; height:12px; border-radius:50%; background:#C0392B;"></div> False Onset</div>
+            <div style="display:flex; align-items:center; gap:8px;"><div style="width:12px; height:12px; border-radius:50%; background:#7A91A0;"></div> Not Analyzed</div>
+            <div style="display:flex; align-items:center; gap:8px;"><div style="width:12px; height:12px; border-radius:50%; background:#B7791F;"></div> Uncertain</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const map = L.map('full-farm-map', { center: [0.5, 37.0], zoom: 6 });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+let allMarkers = [];
+let clusterMode = false;
+
+function colorFor(c) { return {green:'#2E7D52', red:'#C0392B', grey:'#7A91A0', yellow:'#B7791F'}[c] || '#7A91A0'; }
+
+function loadPins(filter=null) {
+    fetch('/api/officer/farm-pins')
+        .then(r => r.json())
+        .then(geo => {
+            allMarkers.forEach(m => map.removeLayer(m));
+            allMarkers = [];
+            if (!geo.features) return;
+            let shown = 0;
+            geo.features.forEach(f => {
+                const p = f.properties;
+                if (filter && p.onset_color !== filter) return;
+                const [lon, lat] = f.geometry.coordinates;
+                const m = L.circleMarker([lat, lon], {
+                    radius: 11, fillColor: colorFor(p.onset_color),
+                    color: '#fff', weight: 2, fillOpacity: 0.9
+                }).bindPopup(`
+                    <div style="font-family:'DM Sans',sans-serif; min-width:200px;">
+                        <div style="font-weight:700; font-size:14px; margin-bottom:4px;">${p.name}</div>
+                        <div style="font-size:12px; color:#567C8D;">📍 ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E</div>
+                        <div style="font-size:12px; margin-top:4px;">Crop: ${p.crop || '—'}</div>
+                        <div style="font-size:12px;">Result: ${p.onset_result || 'Not analyzed'}</div>
+                        ${p.moisture ? `<div style="font-size:12px;">Soil: ${p.moisture}%</div>` : ''}
+                        ${p.phone ? `<div style="margin-top:8px;"><a href="https://wa.me/${p.phone.replace('+','')}" target="_blank" style="color:#2E7D52; font-weight:600; font-size:12px;">📱 WhatsApp</a></div>` : ''}
+                    </div>
+                `);
+                m.addTo(map);
+                allMarkers.push(m);
+                shown++;
+            });
+            document.getElementById('pin-count').textContent = shown;
+        }).catch(e => console.error('Map pins error:', e));
+}
+
+function filterPins(color) {
+    loadPins(color === 'all' ? null : color);
+    document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function toggleClusters() {
+    // Visual feedback only if leaflet-markercluster not loaded
+    event.target.classList.toggle('active');
+}
+
+loadPins();
+lucide.createIcons();
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "officer/base_officer.html" %}
+{% block title %}ROPIAS | Seasonal Calendar{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="officer-greeting-name" style="font-size:1.8rem; margin:0;">📅 Seasonal Calendar</h1>
+    <p class="officer-greeting-sub mt-1 mb-0">Kenya planting seasons and upcoming advisory events</p>
+</div>
+
+<!-- Season overview -->
+<div class="row g-3 mb-4">
+    {% for season in seasons %}
+    <div class="col-12 col-md-6">
+        <div class="officer-card" style="border-left:4px solid {{ season.color }};">
+            <div class="officer-card-body">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h3 style="font-family:var(--font-display); font-size:1.2rem; color:var(--text-primary); margin:0 0 6px;">{{ season.name }}</h3>
+                        <p style="font-family:var(--font-body); font-size:13px; color:var(--text-muted); margin:0;">{{ season.months }} · {{ season.regions }}</p>
+                        <p style="font-family:var(--font-body); font-size:13px; color:var(--text-primary); margin-top:8px;">{{ season.description }}</p>
+                    </div>
+                    <span style="font-size:2rem;">{{ season.icon }}</span>
+                </div>
+                <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
+                    {% for crop in season.crops %}
+                    <span style="padding:3px 10px; border-radius:999px; background:var(--bg-subtle); font-family:var(--font-body); font-size:12px; color:var(--text-muted);">{{ crop }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Monthly planting calendar -->
+<div class="officer-card">
+    <div class="officer-card-header"><h2 class="officer-card-title">Monthly Advisory Calendar</h2></div>
+    <div class="officer-card-body" style="overflow-x:auto;">
+        <div style="display:grid; grid-template-columns: repeat(12, 1fr); gap:8px; min-width:700px;">
+            {% set months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+            {% for month in months %}
+            <div style="text-align:center; font-family:var(--font-body); font-size:12px; font-weight:700; color:var(--text-muted); padding-bottom:6px; border-bottom:2px solid var(--border);">{{ month }}</div>
+            {% endfor %}
+            <!-- Long Rains -->
+            {% for i in range(12) %}
+            <div style="border-radius:8px; padding:8px 4px; text-align:center; font-family:var(--font-body); font-size:10px; font-weight:600; {% if i in [2,3,4,5] %}background:rgba(46,125,82,0.15); color:var(--green-safe);{% elif i in [6,7,8,9] %}background:rgba(183,121,31,0.12); color:var(--amber-watch);{% else %}background:var(--bg-subtle); color:var(--text-muted);{% endif %}">
+                {% if i in [2,3] %}🌧 Long Rains{% elif i in [4,5] %}🌱 Plant{% elif i in [6,7] %}🔆 Short Dry{% elif i in [8,9] %}🌦 Short Rains{% else %}☀ Dry Season{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-3 d-flex flex-wrap gap-3" style="font-family:var(--font-body); font-size:12px;">
+            <div style="display:flex; align-items:center; gap:6px;"><div style="width:14px; height:14px; border-radius:4px; background:rgba(46,125,82,0.15);"></div> Long Rains (MAR–JUN)</div>
+            <div style="display:flex; align-items:center; gap:6px;"><div style="width:14px; height:14px; border-radius:4px; background:rgba(183,121,31,0.12);"></div> Short Rains (OCT–NOV)</div>
+            <div style="display:flex; align-items:center; gap:6px;"><div style="width:14px; height:14px; border-radius:4px; background:var(--bg-subtle);"></div> Dry Season</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>lucide.createIcons();</script>{% endblock %}
